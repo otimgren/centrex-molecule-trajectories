@@ -1,11 +1,16 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from molecule import Molecule
 import pickle
 from scipy.interpolate import interp1d
 from os.path import exists
 from stark_potential import stark_potential
+from centrex_TlF.states import UncoupledBasisState, State
+from beamline import Beamline
+from molecule import Molecule
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from scipy.constants import g
 
 @dataclass
 class BeamlineElement(ABC):
@@ -15,16 +20,31 @@ class BeamlineElement(ABC):
     """
     name: str # Name of beamline element
     z0: float # Z-position where the beamline element starts in meters
-    z1: float # Z-position where the beamline element ends in meters
+    L: float # Length or thickness of element along Z
     x0: float = 0. # X-coordinate of center of the element (0 corresponds to being on straight line from cold cell)
     y0: float = 0. # Y-coordinate of center of element (0 corresponds to being on straight line from cold cell)
+
+    def __post_init__(self):
+        self.z1 = self.z0 + self.L
 
     @abstractmethod
     def propagate_through(self, molecule: Molecule):
         """
         Propagates a molecule through the beamline element
         """
-        ...
+    
+    @abstractmethod
+    def N_steps(self):
+        """
+        Calculates the number of timesteps that are used when propagating through the element.
+        """
+
+    @abstractmethod
+    def plot(self, axes):
+        """
+        Plots the beamline element on the provided axes (axes[0] should be XZ plane and axes[1] YZ plane)
+        """
+
     
 @dataclass
 class CircularAperture(BeamlineElement):
@@ -60,6 +80,29 @@ class CircularAperture(BeamlineElement):
 
                 return
 
+    def N_steps(self):
+        """
+        Max number of steps that are taken when passing through a simple element that doesn't modify the trajectory
+        of an incoming molecule is two (entering and exiting)
+        """
+        return 2
+
+    def plot(self, axes):
+        """
+        Plot the aperture on the provided axes
+        """
+        rect1 = Rectangle((self.z0, self.d/2), self.z1-self.z0, 1, color = (.5, .5,.5))
+        rect2 = Rectangle((self.z0, -self.d/2-1), self.z1-self.z0, 1,color = (0.5, 0.5, 0.5))
+        axes[0].add_patch(rect1)
+        axes[0].add_patch(rect2)
+
+
+        rect3 = Rectangle((self.z0, self.d/2), self.z1-self.z0, 1, color = (.5, .5,.5))
+        rect4 = Rectangle((self.z0, -self.d/2-1), self.z1-self.z0, 1,color = (0.5, 0.5, 0.5))
+        axes[1].add_patch(rect3)
+        axes[1].add_patch(rect4)
+
+
 @dataclass
 class RectangularAperture(BeamlineElement):
     """
@@ -68,6 +111,15 @@ class RectangularAperture(BeamlineElement):
     """
     w: float = 0.02 # Height of aperture along Y in meters
     h: float = 0.02 # Width of aperture along X in meters
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Calculate the coordinates of the edges of the aperture
+        self.x1 = self.x0 - self.w/2
+        self.x2 = self.x0 + self.w/2
+        self.y1 = self.y0 - self.h/2
+        self.y2 = self.y0 + self.h/2
+
     
     def propagate_through(self, molecule: Molecule):
         """
@@ -88,12 +140,108 @@ class RectangularAperture(BeamlineElement):
 
             # Determine if molecule is now within the clear part of the aperture. If not, the molecule is 
             # considered dead
-            x1, x2 = self.x0 - self.w/2, self.x0 + self.w/2
-            y1, y2 = self.y0 - self.h/2, self.y0 + self.h/2
-            if (x1 < molecule.x[0] < x2) and (y1 < molecule.x[1] < y2):
+            if not ((self.x1 < molecule.x[0] < self.x2) and (self.y1 < molecule.x[1] < self.y2)):
                 molecule.set_dead()
                 molecule.set_aperture_hit(self.name)
+                return
 
+    def N_steps(self):
+        """
+        Max number of steps that are taken when passing through a simple element that doesn't modify the trajectory
+        of an incoming molecule is two (entering and exiting)
+        """
+        return 2
+
+    def plot(self, axes):
+        """
+        Plot aperture on the provided axes
+        """
+        rect1 = Rectangle((self.z0, self.x2), self.z1-self.z0, 0.05, color = 'k')
+        rect2 = Rectangle((self.z0, self.x1-0.05), self.z1-self.z0, 0.05, color = 'k')
+        axes[0].add_patch(rect1)
+        axes[0].add_patch(rect2)
+
+        rect3 = Rectangle((self.z0, self.y2), self.z1-self.z0, 0.05, color = 'k')
+        rect4 = Rectangle((self.z0, self.y1-0.05), self.z1-self.z0, 0.05, color = 'k')
+        axes[1].add_patch(rect3)
+        axes[1].add_patch(rect4)
+
+@dataclass
+class FieldPlates(BeamlineElement):
+    """
+    Class for the field plates of the main interaction region of CeNTREX
+    """
+    w: float = 0.02 # Height of aperture along Y in meters
+
+    def __post_init__(self):
+        super().__post_init__()
+        # Calculate the coordinates of the edges of the aperture
+        self.x1 = self.x0 - self.w/2
+        self.x2 = self.x0 + self.w/2
+
+    def propagate_through(self, molecule: Molecule):
+        """
+        Function that checks if the molecule makes it through the field plates without hitting them. If the molecule
+        hits the field plates, the position where it hits them is calculated
+        """
+        #Calculate the time taken to reach start of element from initial position
+        t1 = (self.z0 - molecule.x[2])/molecule.v[2]
+
+        # Calculate the position and velocity of the molecule at start of beamline element
+        molecule.update_position(t1)
+        molecule.update_trajectory()
+
+        # Determine if molecule is now within the clear part of the aperture. If not, the molecule is 
+        # considered dead
+        if not (self.x1 < molecule.x[0] < self.x2):
+            molecule.set_dead()
+            molecule.set_aperture_hit(self.name)
+            return
+
+        # Next check if the molecule makes it through the field plates to the end
+        #Calculate the time taken to reach end of the field plates from initial position
+        t1 = (self.z1 - molecule.x[2])/molecule.v[2]
+
+        # Calculate the position and velocity of the molecule at the end of the field plates
+        molecule.update_position(t1)
+
+        # Check if molecule is within bounds
+        if not (self.x1 < molecule.x[0] < self.x2):
+            # Move molecule back in time 
+            molecule.update_position(-t1)
+
+            # Calculate time taken to hit field plate if molecule is moving in -ve x-direction
+            if molecule.v[0] < 0:
+                delta_t = ((self.x1-molecule.x[0])/molecule.v[0])
+            #Calculate time taken to hit field plate if molecule is moving in +ve x-direction
+            elif molecule.v[0] > 0:
+                delta_t = (self.x2 - molecule.x[0])/molecule.v[0]
+
+            # Calculate final position of molecule
+            molecule.update_position(delta_t)
+            molecule.update_trajectory()
+            return
+        
+        else:
+            # If molecule made it through, update trajectory
+            molecule.update_trajectory()
+            return
+
+    def N_steps(self):
+        """
+        Max number of steps that are taken when passing through a simple element that doesn't modify the trajectory
+        of an incoming molecule is two (entering and exiting)
+        """
+        return 2
+
+    def plot(self, axes):
+        """
+        Plot field plates on the provided axes
+        """
+        rect1 = Rectangle((self.z0, self.x2), self.z1-self.z0, 0.02, color = 'y')
+        rect2 = Rectangle((self.z0, self.x1-0.02), self.z1-self.z0, 0.02, color = 'y')
+        axes[0].add_patch(rect1)
+        axes[0].add_patch(rect2)
 
 @dataclass
 class ElectrostaticLens(BeamlineElement):
@@ -101,7 +249,6 @@ class ElectrostaticLens(BeamlineElement):
     Class used for propagating molecules through the electrostatic lens.
     """
     d: float = 1.75*0.0254 # Bore diameter of lens in m
-    L: float = 0.6 # Length of lens in m
     dz: float = 1e-3 # Spatial size of integration step that is taken inside the lens
     V: float = 27e3 # Voltage on lens electrodes
 
@@ -122,7 +269,6 @@ class ElectrostaticLens(BeamlineElement):
         if rho > self.d/2:
             molecule.set_dead()
             molecule.set_aperture_hit(self.name)
-
             return
 
         # Now propagate the molecule inside the lens. RK4 is used to integrate the time-evolution of the trajectory
@@ -130,7 +276,7 @@ class ElectrostaticLens(BeamlineElement):
         
         # Calculate number of integration steps to take inside the lens and the timestep
         N_steps = int(np.rint(self.L/self.dz))
-        dt = self.dz/molecule.vz
+        dt = self.dz/molecule.v[2]
 
         # Loop over timesteps
         for i in range(N_steps):
@@ -159,10 +305,33 @@ class ElectrostaticLens(BeamlineElement):
                 molecule.set_aperture_hit(self.name)
                 return
 
+    def N_steps(self):
+        """
+        Number of steps when going through an electrostatic lens is 1 for getting to the entrance of the lens
+        plus int(np.rint(self.L/self.dz)) for propagating inside and exiting the lens
+        """
+        return 1 + int(np.rint(self.L/self.dz))
+
+    def plot(self, axes):
+        """
+        Plot lens on the provided axes
+        """
+        rect1 = Rectangle((self.z0, self.d/2), self.z1-self.z0, 0.02, color = 'b')
+        rect2 = Rectangle((self.z0, -self.d/2-0.02), self.z1-self.z0, 0.02, color = 'b')
+        axes[0].add_patch(rect1)
+        axes[0].add_patch(rect2)
+
+        rect3 = Rectangle((self.z0, self.d/2), self.z1-self.z0, 0.02, color = 'b')
+        rect4 = Rectangle((self.z0, -self.d/2-0.02), self.z1-self.z0, 0.02, color = 'b')
+        axes[1].add_patch(rect3)
+        axes[1].add_patch(rect4)
+
 
     def lens_acceleration(self, x, molecule):
         """
-        Calculates the acceleration (in m/s^2) for a molecule inside the electrostatic lens.
+        Calculates the acceleration (in m/s^2) for a molecule inside the electrostatic lens. To speed this up, an
+        interpolation function that gives the acceleration as a function of radial position is saved the first time
+        this function is run for a given lens configuration and molecular state.
         """
 
         # Find the relevant quantum numbers for calculating the acceleration
@@ -171,13 +340,14 @@ class ElectrostaticLens(BeamlineElement):
 
         # Check if the interpolation function has already been saved to file
         filename = f"acceleration_interp_d={self.d:.4f}m_V={self.V:.1f}V_J={J}_mJ={mJ}.pkl"
-        INTERP_DIR = "../interpolation_functions/"
+        INTERP_DIR = "./interpolation_functions/"
         if exists(INTERP_DIR+filename):
             with open(INTERP_DIR+filename, 'rb') as f:
                 a_interp = pickle.load(f)
 
         # If not, calculate the acceleration as function of position inside the lens
         else:
+            print("Interpolation function for lens acceleration not found, making new one")
             # Make an array of radius values for which to calculate the Stark shift
             dr = 1e-4
             r_values = np.linspace(0,self.d/2*1.01,int(np.round(self.d/2/dr)))
@@ -189,10 +359,14 @@ class ElectrostaticLens(BeamlineElement):
             V_stark = stark_potential(molecule.state, E_values/100)
 
             # Calculate radial acceleration at each radius based on dV_stark/dr
-            a_values = -np.gradient(V_stark,dr)/molecule.mass
+            a_values = -np.gradient(V_stark, dr)/molecule.mass
 
             # Make an interpolating function based on the radial positions and calculated accelerations
             a_interp = interp1d(r_values, a_values)
+            
+            # Save the interpolation function to file
+            with open(INTERP_DIR+filename, 'wb+') as f:
+                pickle.dump(a_interp, f)
 
         # Calculate the acceleration at the position of the molecule using the interpolation function
         r = np.sqrt(np.sum(x[:2]**2))
@@ -202,20 +376,31 @@ class ElectrostaticLens(BeamlineElement):
         if r != 0:
             #Resolve acceleration into components
             a[0] = a_r*x[0]/r
-            a[1] = a_r*x[1]/r - g
+            a[1] = a_r*x[1]/r
             a[2] = 0
 
+        a[1] -= g
+        
         return a
 
+
 def main():
-    aperture =  CircularAperture(name='40K Shield', z0 = .99, z1 = 1, d = 0)
-    rect_aperture = RectangularAperture(name = 'Detection aperture', z0 = 100, z1 = 100.01, w = 0.00001, h = 1e-6)
+    aperture = CircularAperture(name='40K Shield', z0 = .99, L = 0.01, d = 0)
+    rect_aperture = RectangularAperture(name = 'Detection aperture', z0 = 100, L = .01, w = 0.00001, h = 1e-6)
+    beamline = Beamline([aperture, rect_aperture])
     molecule = Molecule()
-    print(aperture)
-    aperture.propagate_through(molecule)
+    molecule.init_trajectory(beamline)
+    beamline.propagate_through(molecule)
     print(molecule)
-    rect_aperture.propagate_through(molecule)
-    print(molecule.state.find_largest_component().J)
+
+    lens = ElectrostaticLens(name = "Lens", z0 = 0.3, L =  0.6, V = 27e3)
+    lens.lens_acceleration(np.array((0,0,0.01)), Molecule())
+
+    fig, ax = plt.subplots()
+    rs = np.linspace(0, lens.d/2,1000)
+    accs  = np.array([np.array(lens.lens_acceleration(np.array((r,0,0)), molecule)[0]) for r in rs])
+    ax.plot(rs, accs)
+    plt.show()
 
 if __name__ == '__main__':
     main()

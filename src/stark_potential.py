@@ -60,6 +60,10 @@ def stark_potential(state, Ezs):
     #Find the energies of the desired state at the various electric field values (in J)
     V_array = state_energies[:,state_i]*hbar
 
+    fig, ax = plt.subplots()
+    ax.plot(Ezs, V_array)
+    plt.show()
+
     return V_array
 
 
