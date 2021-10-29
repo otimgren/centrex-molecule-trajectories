@@ -65,15 +65,14 @@ class CircularAperture(BeamlineElement):
         # Loop over start of element and end of element
         for z in [self.z0, self.z1]:
             #Calculate the time taken to reach start of element from initial position
-            t1 = (z - molecule.x[2])/molecule.v[2]
+            delta_t = (z - molecule.x()[2])/molecule.v()[2]
 
             # Calculate the position and velocity of the molecule at start of beamline element
-            molecule.update_position(t1)
-            molecule.update_trajectory()
+            molecule.update_trajectory(delta_t)
 
             # Determine if molecule is now within the clear part of the aperture. If not, the molecule is 
             # considered dead
-            rho = np.sqrt(np.sum(molecule.x[:2]**2))
+            rho = np.sqrt(np.sum(molecule.x()[:2]**2))
             if rho > self.d/2:
                 molecule.set_dead()
                 molecule.set_aperture_hit(self.name)
@@ -132,11 +131,10 @@ class RectangularAperture(BeamlineElement):
         # Loop over start of element and end of element
         for z in [self.z0, self.z1]:
             #Calculate the time taken to reach start of element from initial position
-            t1 = (z - molecule.x[2])/molecule.v[2]
+            delta_t = (z - molecule.x()[2])/molecule.v()[2]
 
             # Calculate the position and velocity of the molecule at start of beamline element
-            molecule.update_position(t1)
-            molecule.update_trajectory()
+            molecule.update_trajectory(delta_t)
 
             # Determine if molecule is now within the clear part of the aperture. If not, the molecule is 
             # considered dead
@@ -185,41 +183,36 @@ class FieldPlates(BeamlineElement):
         hits the field plates, the position where it hits them is calculated
         """
         #Calculate the time taken to reach start of element from initial position
-        t1 = (self.z0 - molecule.x[2])/molecule.v[2]
+        delta_t = (self.z0 - molecule.x()[2])/molecule.v()[2]
 
         # Calculate the position and velocity of the molecule at start of beamline element
-        molecule.update_position(t1)
-        molecule.update_trajectory()
+        molecule.update_trajectory(delta_t)
 
         # Determine if molecule is now within the clear part of the aperture. If not, the molecule is 
         # considered dead
-        if not (self.x1 < molecule.x[0] < self.x2):
+        if not (self.x1 < molecule.x()[0] < self.x2):
             molecule.set_dead()
             molecule.set_aperture_hit(self.name)
             return
 
         # Next check if the molecule makes it through the field plates to the end
         #Calculate the time taken to reach end of the field plates from initial position
-        t1 = (self.z1 - molecule.x[2])/molecule.v[2]
+        delta_t = (self.z1 - molecule.x()[2])/molecule.v()[2]
 
-        # Calculate the position and velocity of the molecule at the end of the field plates
-        molecule.update_position(t1)
+        # Calculate the position of the molecule at the end of the field plates
+        x = molecule.x(delta_t)
 
         # Check if molecule is within bounds
-        if not (self.x1 < molecule.x[0] < self.x2):
-            # Move molecule back in time 
-            molecule.update_position(-t1)
-
+        if not (self.x1 < x < self.x2):
             # Calculate time taken to hit field plate if molecule is moving in -ve x-direction
             if molecule.v[0] < 0:
-                delta_t = ((self.x1-molecule.x[0])/molecule.v[0])
+                delta_t = (self.x1 - molecule.x()[0])/molecule.v[0]
             #Calculate time taken to hit field plate if molecule is moving in +ve x-direction
             elif molecule.v[0] > 0:
                 delta_t = (self.x2 - molecule.x[0])/molecule.v[0]
 
             # Calculate final position of molecule
-            molecule.update_position(delta_t)
-            molecule.update_trajectory()
+            molecule.update_trajectory(delta_t)
             return
         
         else:
@@ -257,15 +250,14 @@ class ElectrostaticLens(BeamlineElement):
         Propagates a molecule through the electrostatic lens.
         """
         #Calculate the time taken to reach start of lens from initial position
-        t1 = (self.z0 - molecule.x[2])/molecule.v[2]
+        delta_t = (self.z0 - molecule.x()[2])/molecule.v()[2]
 
         # Calculate the position and velocity of the molecule at start of beamline element
-        molecule.update_position(t1)
-        molecule.update_trajectory()
+        molecule.update_trajectory(delta_t)
 
         # Determine if molecule is now within the lens bore. If not, the molecule is 
         # considered dead
-        rho = np.sqrt(np.sum(molecule.x[:2]**2))
+        rho = np.sqrt(np.sum(molecule.x()[:2]**2))
         if rho > self.d/2:
             molecule.set_dead()
             molecule.set_aperture_hit(self.name)
@@ -273,37 +265,53 @@ class ElectrostaticLens(BeamlineElement):
 
         # Now propagate the molecule inside the lens. RK4 is used to integrate the time-evolution of the trajectory
         # here
-        
+        self.propagate_inside_lens(molecule)
+
+    def propagate_inside_lens(self, molecule):
+        """
+        Function that calculates and updates the trajectory of a molecule while it is inside the electrostatic lens.
+        """
+        # Get value of counter that keeps track of trajectory indices
+        n = molecule.trajectory.n
+
         # Calculate number of integration steps to take inside the lens and the timestep
         N_steps = int(np.rint(self.L/self.dz))
-        dt = self.dz/molecule.v[2]
+        dt = self.dz/molecule.v()[2]
 
         # Loop over timesteps
         for i in range(N_steps):
-            k1 = molecule.v
-            l1 = self.lens_acceleration(molecule.x, molecule)
+            x = molecule.x()
+            k1 = molecule.v()
+            l1 = self.lens_acceleration(x, molecule)
 
-            k2 = molecule.v+dt*l1/2
-            l2 = self.lens_acceleration(molecule.x + dt*k1, molecule)
+            k2 = k1+dt*l1/2
+            l2 = self.lens_acceleration(x + dt*k1, molecule)
 
-            k3 = molecule.v+dt*l2/2
-            l3 = self.lens_acceleration(molecule.x + dt*k2/2, molecule)
+            k3 = k1+dt*l2/2
+            l3 = self.lens_acceleration(x + dt*k2/2, molecule)
 
-            k4 = molecule.v+dt*l3
-            l4 = self.lens_acceleration(molecule.x + dt*k3, molecule)
+            k4 = k1+dt*l3
+            l4 = self.lens_acceleration(x + dt*k3, molecule)
 
-            molecule.x += dt*(k1+2*k2+2*k3+k4)/6
-            molecule.v += dt*(l1+2*l2+2*l3+l4)/6
-            molecule.t += dt
-            molecule.a = l1
-            molecule.update_trajectory()
+            # Update the molecule trajectory
+            n += 1
+            molecule.trajectory.x[n, :] = x + dt*(k1+2*k2+2*k3+k4)/6
+            molecule.trajectory.v[n, :] = k1 + dt*(l1+2*l2+2*l3+l4)/6
+            molecule.trajectory.t[n] = molecule.trajectory.t[n-1] + dt
+            molecule.trajectory.a[n, :] = l1
+            molecule.trajectory.n = n
 
             #Cut molecules outside the allowed region
-            rho = np.sqrt(molecule.x[0]**2 + molecule.x[1]**2)
+            rho = np.sqrt(molecule.x()[0]**2 + molecule.x()[1]**2)
             if rho > self.d/2:
                 molecule.set_dead()
                 molecule.set_aperture_hit(self.name)
                 return
+
+            # Set acceleration back to gravitational now that molecule is out of the lens
+            molecule.trajectory.a[n,:] = np.array((0,-g,0))
+
+
 
     def N_steps(self):
         """

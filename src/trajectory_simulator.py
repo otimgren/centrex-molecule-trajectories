@@ -30,8 +30,8 @@ class TrajectorySimulator:
         # Make molecules list
         molecules = np.empty(N_molecules, dtype = 'object')
         for i in range(N_molecules):
-            molecule = Molecule(state, xs[:,i], vs[:,i])
-            molecule.init_trajectory(beamline)
+            molecule = Molecule(state)
+            molecule.init_trajectory(beamline, xs[:,i], vs[:,i])
             molecules[i] = molecule
 
         return molecules
@@ -52,8 +52,8 @@ class TrajectorySimulator:
         for molecule in tqdm(molecules):
             beamline.propagate_through(molecule)
             
-            if molecule.aperture_hit in apertures_of_interest:
-                molecule.plot_trajectory(axes)
+            # if molecule.aperture_hit in apertures_of_interest:
+            molecule.plot_trajectory(axes)
 
         plt.show()
 
@@ -84,7 +84,8 @@ def main():
 
     # Run simulator
     apertures_of_interest = ["ES lens", "Field plates", "DR aperture", "Detected"]
-    molecules = simulator.run_simulation(beamline, N_traj=int(1e5), apertures_of_interest = apertures_of_interest)
+    molecules = simulator.run_simulation(beamline, N_traj=int(1e1), apertures_of_interest = apertures_of_interest)
+    print(molecules[0].trajectory.x)
 
     # molecule = Molecule()
     # molecule.init_trajectory(beamline)

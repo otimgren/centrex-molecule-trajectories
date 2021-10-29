@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass
 from centrex_TlF.states import UncoupledBasisState, State
+from scipy.constants import g
 
 @dataclass
 class Molecule:
@@ -9,39 +10,63 @@ class Molecule:
     """
     state: State = 1*UncoupledBasisState(J = 2, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = -1/2, Omega = 0,
                                             P = +1, electronic_state = 'X')# Molecular state assumed for the molecule to calculate trajectory inside electrostatic lens
-    x: np.ndarray = np.array((0,0,0))
-    v: np.ndarray = np.array((0,0,200))
-    a: np.ndarray = np.array((0,-9.81,0))
-    t: float = 0.
     alive: bool = True
     mass: float = (204.38+19.00)*1.67e-27 # Molecular mass in kg
 
-    def __post_init__(self):
-        # Check that velocity and position are of correct shape
-        assert self.x.shape == (3,), f"Input x0 shape: {self.x.shape}. Needs to be (3,)."
-        assert self.v.shape == (3,), f"Input v0 shape: {self.v.shape}. Needs to be (3,)."
-        assert self.a.shape == (3,), f"Input a0 shape: {self.a.shape}. Needs to be (3,)."
-
-    def init_trajectory(self, beamline):
+    def init_trajectory(self, beamline, x0 =  np.array((0,0,0)), v0 = np.array((0,0,200)), 
+                        a0 = np.array((0,-g,0)), t0 = 0):
         """
         Initializes a molecular trajectory object based on a given beamline.
         """
+        # Initialize trajectory
         self.trajectory = Trajectory(beamline)
 
+        # Update the initial state of the molecule to the trajectory
+        self.trajectory.update(x0, v0, a0, t0)
 
-    def update_trajectory(self):
+    def x(self, delta_t: float = None):
         """
-        Adds current position, velocity, acceleration and time to molecule trajectory.
+        Returns the current position of the molecule if delta_t == None, or the position of the molecule after
+        time delta_t if delta_t is provided.
         """
-        self.trajectory.update(self)
+        if not delta_t:
+            return self.trajectory.x[self.trajectory.n,:]
+        else:
+            return self.x() + self.v()*delta_t + self.a()*delta_t**2/2
 
-    def update_position(self, delta_t):
+    def v(self, delta_t: float = None):
         """
-        Calculates the position of the molecule after time delta_t (s) has passed and updates the attributes
+        Returns the current velocity of the molecule if delta_t == None, or the velocity of the molecule after
+        time delta_t if delta_t is provided.
         """
-        self.x = self.x + self.v*delta_t + self.a*delta_t**2/2
-        self.v = self.v + self.a*delta_t
-        self.t += delta_t
+        if not delta_t:
+            return self.trajectory.v[self.trajectory.n,:]
+        else:
+            return self.v() + self.a()*delta_t
+
+    def a(self):
+        """
+        Returns the current acceleration of the molecule
+        """
+        return self.trajectory.a[self.trajectory.n,:]
+
+    def t(self):
+        """
+        Returns the current time of the molecule
+        """
+        return self.trajectory.t[self.trajectory.n]
+
+    def update_trajectory(self, delta_t, a = np.array((0,-g,0))):
+        """
+        Calculates the position of the molecule after time delta_t (s) has passed and updates the trajectory.
+        This function is used in the parts of the beamline where the acceleration is constant (i.e. everywhere
+        except the electrostatic lens)
+        """
+        x = self.x(delta_t)
+        v = self.v(delta_t)
+        t = self.t() + delta_t
+
+        self.trajectory.update(x,v,a,t)
 
     def set_aperture_hit(self, aperture_name):
         """
@@ -84,15 +109,15 @@ class Trajectory:
         # Initialize a counter to keep track of which position of the arrays we are in
         self.n = 0
 
-    def update(self, molecule):
+    def update(self, x, v, a, t):
         """
         Adds the current position of molecule to trajectory arrays at index n and increments n by one
         """
         # Update arrays
-        self.x[self.n,:] = molecule.x
-        self.v[self.n,:] = molecule.v
-        self.a[self.n,:] = molecule.a
-        self.t[self.n] = molecule.t 
+        self.x[self.n,:] = x
+        self.v[self.n,:] = v
+        self.a[self.n,:] = a
+        self.t[self.n] = t 
 
         # Increment the index counter
         self.n += 1
