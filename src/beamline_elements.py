@@ -23,6 +23,7 @@ class BeamlineElement(ABC):
     L: float # Length or thickness of element along Z
     x0: float = 0. # X-coordinate of center of the element (0 corresponds to being on straight line from cold cell)
     y0: float = 0. # Y-coordinate of center of element (0 corresponds to being on straight line from cold cell)
+    index: int = None # Index that tells the order of beamline elements in a beamline
 
     def __post_init__(self):
         self.z1 = self.z0 + self.L
@@ -138,7 +139,7 @@ class RectangularAperture(BeamlineElement):
 
             # Determine if molecule is now within the clear part of the aperture. If not, the molecule is 
             # considered dead
-            if not ((self.x1 < molecule.x[0] < self.x2) and (self.y1 < molecule.x[1] < self.y2)):
+            if not ((self.x1 < molecule.x()[0] < self.x2) and (self.y1 < molecule.x()[1] < self.y2)):
                 molecule.set_dead()
                 molecule.set_aperture_hit(self.name)
                 return
@@ -203,21 +204,23 @@ class FieldPlates(BeamlineElement):
         x = molecule.x(delta_t)
 
         # Check if molecule is within bounds
-        if not (self.x1 < x < self.x2):
+        if not (self.x1 < x[0] < self.x2):
             # Calculate time taken to hit field plate if molecule is moving in -ve x-direction
-            if molecule.v[0] < 0:
-                delta_t = (self.x1 - molecule.x()[0])/molecule.v[0]
+            if molecule.v()[0] < 0:
+                delta_t = (self.x1 - molecule.x()[0])/molecule.v()[0]
             #Calculate time taken to hit field plate if molecule is moving in +ve x-direction
-            elif molecule.v[0] > 0:
-                delta_t = (self.x2 - molecule.x[0])/molecule.v[0]
+            elif molecule.v()[0] > 0:
+                delta_t = (self.x2 - molecule.x()[0])/molecule.v()[0]
 
             # Calculate final position of molecule
             molecule.update_trajectory(delta_t)
+            molecule.set_dead()
+            molecule.set_aperture_hit(self.name)
             return
         
         else:
             # If molecule made it through, update trajectory
-            molecule.update_trajectory()
+            molecule.update_trajectory(delta_t)
             return
 
     def N_steps(self):
@@ -244,11 +247,12 @@ class ElectrostaticLens(BeamlineElement):
     d: float = 1.75*0.0254 # Bore diameter of lens in m
     dz: float = 1e-3 # Spatial size of integration step that is taken inside the lens
     V: float = 27e3 # Voltage on lens electrodes
+    a_interp: interp1d = None
 
     def propagate_through(self, molecule):
         """
         Propagates a molecule through the electrostatic lens.
-        """
+        """        
         #Calculate the time taken to reach start of lens from initial position
         delta_t = (self.z0 - molecule.x()[2])/molecule.v()[2]
 
@@ -260,12 +264,21 @@ class ElectrostaticLens(BeamlineElement):
         rho = np.sqrt(np.sum(molecule.x()[:2]**2))
         if rho > self.d/2:
             molecule.set_dead()
-            molecule.set_aperture_hit(self.name)
+            molecule.set_aperture_hit("Lens entrance")
             return
 
         # Now propagate the molecule inside the lens. RK4 is used to integrate the time-evolution of the trajectory
         # here
         self.propagate_inside_lens(molecule)
+        if not molecule.alive:
+            return
+
+        # Make sure that molecule is now at the end of the lens:
+        #Calculate the time taken to reach start of lens from initial position
+        delta_t = (self.z1 - molecule.x()[2])/molecule.v()[2]
+    
+        # Calculate the position and velocity of the molecule at start of beamline element
+        molecule.update_trajectory(delta_t)
 
     def propagate_inside_lens(self, molecule):
         """
@@ -294,24 +307,19 @@ class ElectrostaticLens(BeamlineElement):
             l4 = self.lens_acceleration(x + dt*k3, molecule)
 
             # Update the molecule trajectory
-            n += 1
             molecule.trajectory.x[n, :] = x + dt*(k1+2*k2+2*k3+k4)/6
             molecule.trajectory.v[n, :] = k1 + dt*(l1+2*l2+2*l3+l4)/6
             molecule.trajectory.t[n] = molecule.trajectory.t[n-1] + dt
             molecule.trajectory.a[n, :] = l1
+            n += 1
             molecule.trajectory.n = n
 
             #Cut molecules outside the allowed region
-            rho = np.sqrt(molecule.x()[0]**2 + molecule.x()[1]**2)
+            rho = np.sqrt(np.sum(molecule.x()[:2]**2))
             if rho > self.d/2:
                 molecule.set_dead()
-                molecule.set_aperture_hit(self.name)
+                molecule.set_aperture_hit("Inside lens")
                 return
-
-            # Set acceleration back to gravitational now that molecule is out of the lens
-            molecule.trajectory.a[n,:] = np.array((0,-g,0))
-
-
 
     def N_steps(self):
         """
@@ -341,44 +349,44 @@ class ElectrostaticLens(BeamlineElement):
         interpolation function that gives the acceleration as a function of radial position is saved the first time
         this function is run for a given lens configuration and molecular state.
         """
+        if not self.a_interp:
+            # Find the relevant quantum numbers for calculating the acceleration
+            J = molecule.state.find_largest_component().J
+            mJ = molecule.state.find_largest_component().mJ
 
-        # Find the relevant quantum numbers for calculating the acceleration
-        J = molecule.state.find_largest_component().J
-        mJ = molecule.state.find_largest_component().mJ
+            # Check if the interpolation function has already been saved to file
+            filename = f"acceleration_interp_d={self.d:.4f}m_V={self.V:.1f}V_J={J}_mJ={mJ}.pkl"
+            INTERP_DIR = "./interpolation_functions/"
+            if exists(INTERP_DIR+filename):
+                with open(INTERP_DIR+filename, 'rb') as f:
+                    self.a_interp = pickle.load(f)
 
-        # Check if the interpolation function has already been saved to file
-        filename = f"acceleration_interp_d={self.d:.4f}m_V={self.V:.1f}V_J={J}_mJ={mJ}.pkl"
-        INTERP_DIR = "./interpolation_functions/"
-        if exists(INTERP_DIR+filename):
-            with open(INTERP_DIR+filename, 'rb') as f:
-                a_interp = pickle.load(f)
+            # If not, calculate the acceleration as function of position inside the lens
+            else:
+                print("Interpolation function for lens acceleration not found, making new one")
+                # Make an array of radius values for which to calculate the Stark shift
+                dr = 1e-4
+                r_values = np.linspace(0,self.d/2*1.01,int(np.round(self.d/2/dr)))
+                
+                # Convert radius values into electric field values (assuming E = 2*V/R^2 * r within the lens radius)
+                E_values = 2*self.V/((self.d/2)**2) * r_values # E is in V/m
 
-        # If not, calculate the acceleration as function of position inside the lens
-        else:
-            print("Interpolation function for lens acceleration not found, making new one")
-            # Make an array of radius values for which to calculate the Stark shift
-            dr = 1e-4
-            r_values = np.linspace(0,self.d/2*1.01,int(np.round(self.d/2/dr)))
-            
-            # Convert radius values into electric field values (assuming E = 2*V/R^2 * r within the lens radius)
-            E_values = 2*self.V/((self.d/2)**2) * r_values # E is in V/m
+                # Calculate the Stark shift at each of these positions
+                V_stark = stark_potential(molecule.state, E_values/100)
 
-            # Calculate the Stark shift at each of these positions
-            V_stark = stark_potential(molecule.state, E_values/100)
+                # Calculate radial acceleration at each radius based on dV_stark/dr
+                a_values = -np.gradient(V_stark, dr)/molecule.mass
 
-            # Calculate radial acceleration at each radius based on dV_stark/dr
-            a_values = -np.gradient(V_stark, dr)/molecule.mass
+                # Make an interpolating function based on the radial positions and calculated accelerations
+                self.a_interp = interp1d(r_values, a_values)
 
-            # Make an interpolating function based on the radial positions and calculated accelerations
-            a_interp = interp1d(r_values, a_values)
-            
-            # Save the interpolation function to file
-            with open(INTERP_DIR+filename, 'wb+') as f:
-                pickle.dump(a_interp, f)
+                # Save the interpolation function to file
+                with open(INTERP_DIR+filename, 'wb+') as f:
+                    pickle.dump(self.a_interp, f)
 
         # Calculate the acceleration at the position of the molecule using the interpolation function
         r = np.sqrt(np.sum(x[:2]**2))
-        a_r = a_interp(r)
+        a_r = self.a_interp(r)
 
         a = np.zeros((3,))
         if r != 0:

@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 from centrex_TlF.states import UncoupledBasisState, State
 from scipy.constants import g
+from enum import Enum
 
 @dataclass
 class Molecule:
@@ -30,7 +31,7 @@ class Molecule:
         time delta_t if delta_t is provided.
         """
         if not delta_t:
-            return self.trajectory.x[self.trajectory.n,:]
+            return self.trajectory.x[self.trajectory.n-1,:]
         else:
             return self.x() + self.v()*delta_t + self.a()*delta_t**2/2
 
@@ -40,7 +41,7 @@ class Molecule:
         time delta_t if delta_t is provided.
         """
         if not delta_t:
-            return self.trajectory.v[self.trajectory.n,:]
+            return self.trajectory.v[self.trajectory.n-1,:]
         else:
             return self.v() + self.a()*delta_t
 
@@ -48,13 +49,13 @@ class Molecule:
         """
         Returns the current acceleration of the molecule
         """
-        return self.trajectory.a[self.trajectory.n,:]
+        return self.trajectory.a[self.trajectory.n-1,:]
 
     def t(self):
         """
         Returns the current time of the molecule
         """
-        return self.trajectory.t[self.trajectory.n]
+        return self.trajectory.t[self.trajectory.n-1]
 
     def update_trajectory(self, delta_t, a = np.array((0,-g,0))):
         """
@@ -80,12 +81,20 @@ class Molecule:
         """
         self.alive = False
 
-    def plot_trajectory(self, axes, ls: str = 'k'):
+    def plot_trajectory(self, axes):
         """
         Plots the trajectory of the molecule
         """
-        axes[0].plot(self.trajectory.x[:,2], self.trajectory.x[:,0], ls)
-        axes[1].plot(self.trajectory.x[:,2], self.trajectory.x[:,1], ls)
+        
+        if self.aperture_hit == 'Detected':
+            color = 'g'
+        elif self.aperture_hit == 'Field plates':
+            color = 'r'
+        else:
+            color = 'k'
+
+        axes[0].plot(self.trajectory.x[:,2], self.trajectory.x[:,0], c = color)
+        axes[1].plot(self.trajectory.x[:,2], self.trajectory.x[:,1], c = color)
 
 class Trajectory:
     """
@@ -94,7 +103,7 @@ class Trajectory:
     def __init__(self, beamline):
         
         # Calculate number of positions where points in the trajectory will be stored
-        N_steps = 1 # Initial position
+        N_steps = 10 # Initial position and a few extras
 
         # Loop over the beamline elements and determine how many steps are required for each
         for element in beamline.elements:
@@ -117,10 +126,24 @@ class Trajectory:
         self.x[self.n,:] = x
         self.v[self.n,:] = v
         self.a[self.n,:] = a
-        self.t[self.n] = t 
+        self.t[self.n] = t
 
         # Increment the index counter
         self.n += 1
+
+    def add_steps(self, beamline):
+        """
+        Adds a number of steps to the trajectories based on given part of beamline
+        """
+        N_steps = 0
+        # Loop over the beamline elements and determine how many steps are required for each
+        for element in beamline.elements:
+            N_steps += element.N_steps()
+
+        self.x = np.concatenate((self.x, np.full((N_steps, 3), np.nan)))
+        self.v = np.concatenate((self.v, np.full((N_steps, 3), np.nan)))
+        self.a = np.concatenate((self.a, np.full((N_steps, 3), np.nan)))
+        self.t = np.concatenate((self.t, np.full((N_steps, ), np.nan)))
 
     def drop_nans(self):
         """
@@ -130,5 +153,9 @@ class Trajectory:
         self.v = self.v[np.all(np.isfinite(self.v), axis = 1),:]
         self.a = self.a[np.all(np.isfinite(self.a), axis = 1),:]
         self.t = self.t[np.isfinite(self.t)]
+
+
+
+    
 
         

@@ -15,14 +15,25 @@ class Beamline:
     def __post_init__(self):
         self.sort_elements()
 
-    def propagate_through(self, molecule):
+        # Give the elements indices
+        for i, element in enumerate(self.elements):
+            element.index = i
+
+    def propagate_through(self, molecule, name: str = "ES lens"):
         """
         Propagates a molecule through the beamline by propagating a molecule through each of the beamline elements.
         """
         # Loop over elements and propagate molecule through them
         for element in self.elements:
+            # If molecule has made it to electrostatic lens, add more entries to trajectory
+            if element.name == name:
+                beamline_post_lens = Beamline(self.elements[self.find_element(name).index:])
+                molecule.trajectory.add_steps(beamline_post_lens)
+
+            # Propagate the molecule through the current element
             element.propagate_through(molecule)
 
+            # If molecule hit the element, stop looping
             if not molecule.alive:
                 break
 
@@ -39,6 +50,14 @@ class Beamline:
         """
         get_z0 = lambda x: x.z0
         self.sort_elements = self.elements.sort(key = get_z0)
+
+    def find_element(self, name):
+        """
+        Returns the element of the beamline with the provided name
+        """
+        for i, element in enumerate(self.elements):
+            if element.name == name:
+                return element
 
     def plot(self):
         """

@@ -69,7 +69,7 @@ class StandardPositionDistribution(Distribution):
 
     def draw(self, n: int) -> np.ndarray:
         theta = uniform.rvs(size = n)*2*np.pi
-        r = np.sqrt(uniform.rvs(size = n)) * self.d
+        r = np.sqrt(uniform.rvs(size = n)) * self.d/2
 
         return np.array((r*np.cos(theta), r*np.sin(theta), np.full(n,self.z)))
 
