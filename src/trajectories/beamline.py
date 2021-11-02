@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import List
-from molecule import Molecule
 import numpy as np
 import matplotlib.pyplot as plt
 

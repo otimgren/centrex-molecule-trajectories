@@ -1,10 +1,9 @@
 import numpy as np
 from centrex_TlF.states import generate_uncoupled_states_ground, UncoupledBasisState, State
-from centrex_TlF.states.utils import find_closest_vector_idx, vector_to_state
+from centrex_TlF.states.utils import find_closest_vector_idx
 from centrex_TlF.hamiltonian import generate_uncoupled_hamiltonian_X, generate_uncoupled_hamiltonian_X_function
 import matplotlib.pyplot as plt
 from scipy.constants import hbar
-
 
 def stark_potential(state, Ezs):
     """

@@ -248,6 +248,9 @@ class ElectrostaticLens(BeamlineElement):
     dz: float = 1e-3 # Spatial size of integration step that is taken inside the lens
     V: float = 27e3 # Voltage on lens electrodes
     a_interp: interp1d = None
+    state: State = 1*UncoupledBasisState(J = 2, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = -1/2, Omega = 0,
+                                            P = +1, electronic_state = 'X')# Molecular state assumed for the molecule to calculate trajectory inside electrostatic lens
+    mass: float = (204.38+19.00)*1.67e-27 # Molecular mass in kg for molecule that will be propagating through lens
 
     def propagate_through(self, molecule):
         """
@@ -295,16 +298,16 @@ class ElectrostaticLens(BeamlineElement):
         for i in range(N_steps):
             x = molecule.x()
             k1 = molecule.v()
-            l1 = self.lens_acceleration(x, molecule)
+            l1 = self.lens_acceleration(x)
 
             k2 = k1+dt*l1/2
-            l2 = self.lens_acceleration(x + dt*k1, molecule)
+            l2 = self.lens_acceleration(x + dt*k1)
 
             k3 = k1+dt*l2/2
-            l3 = self.lens_acceleration(x + dt*k2/2, molecule)
+            l3 = self.lens_acceleration(x + dt*k2/2)
 
             k4 = k1+dt*l3
-            l4 = self.lens_acceleration(x + dt*k3, molecule)
+            l4 = self.lens_acceleration(x + dt*k3)
 
             # Update the molecule trajectory
             molecule.trajectory.x[n, :] = x + dt*(k1+2*k2+2*k3+k4)/6
@@ -343,7 +346,7 @@ class ElectrostaticLens(BeamlineElement):
         axes[1].add_patch(rect4)
 
 
-    def lens_acceleration(self, x, molecule):
+    def lens_acceleration(self, x):
         """
         Calculates the acceleration (in m/s^2) for a molecule inside the electrostatic lens. To speed this up, an
         interpolation function that gives the acceleration as a function of radial position is saved the first time
@@ -351,8 +354,8 @@ class ElectrostaticLens(BeamlineElement):
         """
         if not self.a_interp:
             # Find the relevant quantum numbers for calculating the acceleration
-            J = molecule.state.find_largest_component().J
-            mJ = molecule.state.find_largest_component().mJ
+            J = self.state.find_largest_component().J
+            mJ = self.state.find_largest_component().mJ
 
             # Check if the interpolation function has already been saved to file
             filename = f"acceleration_interp_d={self.d:.4f}m_V={self.V:.1f}V_J={J}_mJ={mJ}.pkl"
@@ -372,10 +375,10 @@ class ElectrostaticLens(BeamlineElement):
                 E_values = 2*self.V/((self.d/2)**2) * r_values # E is in V/m
 
                 # Calculate the Stark shift at each of these positions
-                V_stark = stark_potential(molecule.state, E_values/100)
+                V_stark = stark_potential(self.state, E_values/100)
 
                 # Calculate radial acceleration at each radius based on dV_stark/dr
-                a_values = -np.gradient(V_stark, dr)/molecule.mass
+                a_values = -np.gradient(V_stark, dr)/self.mass
 
                 # Make an interpolating function based on the radial positions and calculated accelerations
                 self.a_interp = interp1d(r_values, a_values)
@@ -410,11 +413,11 @@ def main():
     print(molecule)
 
     lens = ElectrostaticLens(name = "Lens", z0 = 0.3, L =  0.6, V = 27e3)
-    lens.lens_acceleration(np.array((0,0,0.01)), Molecule())
+    lens.lens_acceleration(np.array((0,0,0.01)))
 
     fig, ax = plt.subplots()
     rs = np.linspace(0, lens.d/2,1000)
-    accs  = np.array([np.array(lens.lens_acceleration(np.array((r,0,0)), molecule)[0]) for r in rs])
+    accs  = np.array([np.array(lens.lens_acceleration(np.array((r,0,0)))[0]) for r in rs])
     ax.plot(rs, accs)
     plt.show()
 

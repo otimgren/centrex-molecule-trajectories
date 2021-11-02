@@ -1,18 +1,13 @@
 import numpy as np
 from dataclasses import dataclass
-from centrex_TlF.states import UncoupledBasisState, State
 from scipy.constants import g
-from enum import Enum
 
 @dataclass
 class Molecule:
     """
     Defines a molecule object
     """
-    state: State = 1*UncoupledBasisState(J = 2, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = -1/2, Omega = 0,
-                                            P = +1, electronic_state = 'X')# Molecular state assumed for the molecule to calculate trajectory inside electrostatic lens
     alive: bool = True
-    mass: float = (204.38+19.00)*1.67e-27 # Molecular mass in kg
 
     def init_trajectory(self, beamline, x0 =  np.array((0,0,0)), v0 = np.array((0,0,200)), 
                         a0 = np.array((0,-g,0)), t0 = 0):

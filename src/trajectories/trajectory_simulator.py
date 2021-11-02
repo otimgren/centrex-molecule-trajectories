@@ -1,15 +1,15 @@
 from dataclasses import dataclass
-import numpy as np
-from beamline import Beamline
-from centrex_TlF.states import State
-from beamline_elements import CircularAperture, ElectrostaticLens, FieldPlates, RectangularAperture
-from distributions import StandardPositionDistribution, StandardVelocityDistribution
-from typing import List
-from molecule import Molecule
-import timeit
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
+from typing import List
+
+from centrex_TlF.states import State
+
+from .beamline import Beamline
+from .distributions import StandardPositionDistribution, StandardVelocityDistribution
+from .molecule import Molecule
 
 class TrajectorySimulator:
     """
@@ -18,7 +18,7 @@ class TrajectorySimulator:
     def __init__(self, filename: str = None) -> None:
         self.counter = Counter()
 
-    def run_simulation(self, beamline: Beamline, state: State = Molecule().state, name:str = "ES lens",
+    def run_simulation(self, beamline: Beamline, name:str = "ES lens",
                        vdist = StandardVelocityDistribution(), xdist = StandardPositionDistribution(),  
                        N_traj: int = 1000, apertures_of_interest = []) -> List:
         """
@@ -40,7 +40,7 @@ class TrajectorySimulator:
             molecules = []
             for i in range(N):
                 # Initialize a molecule
-                molecule = Molecule(state)
+                molecule = Molecule()
                 beamline_pre_lens = Beamline(beamline.elements[:beamline.find_element(name).index])
                 molecule.init_trajectory(beamline_pre_lens, xs[:,i], vs[:,i]) 
 
@@ -58,7 +58,7 @@ class TrajectorySimulator:
 
         return molecules
 
-    def run_simulation_parallel(self, beamline: Beamline, state: State = Molecule().state, name:str = "ES lens",
+    def run_simulation_parallel(self, beamline: Beamline, name:str = "ES lens",
                        vdist = StandardVelocityDistribution(), xdist = StandardPositionDistribution(),  
                        N_traj: int = 1000, apertures_of_interest = [], n_jobs = 10) -> List:
         """
@@ -84,7 +84,7 @@ class TrajectorySimulator:
             molecules = []
             for i in range(N):
                 # Initialize a molecule
-                molecule = Molecule(state)
+                molecule = Molecule()
                 beamline_pre_lens = Beamline(beamline.elements[:beamline.find_element(name).index])
                 molecule.init_trajectory(beamline_pre_lens, xs[:,i], vs[:,i]) 
 
@@ -172,33 +172,3 @@ class Counter:
                 else:
                     self.counter_dict[key] = value
 
-def main():
-    # Define the beamline elements
-    m_per_in = 0.0254 # Constant for converting meters to inches
-    fourK_shield = CircularAperture(z0 = 1.7*m_per_in, L = 0.25*m_per_in, d = 1*m_per_in, name = '4K shield')
-    fortyK_shield = CircularAperture(z0 = fourK_shield.z1 + 1.25*m_per_in, L = 0.25*m_per_in, d = 1*m_per_in,
-                                     name = '40K shield')
-    bb_exit = CircularAperture(z0 = fortyK_shield.z1 + 2.5*m_per_in, L = 0.75*m_per_in, d = 4*m_per_in,
-                               name = 'BB exit')
-    lens = ElectrostaticLens(z0 = bb_exit.z1+33*m_per_in, L = 0.6, name = "ES lens")
-    field_plates = FieldPlates(z0 = 2.43, L = 3.0, w = 0.02, name = "Field plates")
-    dr_aperture = RectangularAperture(z0 = field_plates.z1 + 39.9*m_per_in, L = 0.25*m_per_in, name = "DR aperture",
-                                      w = 0.018, h = 0.03)
-
-    # Collect beamline elements into a list
-    beamline_elements = [fourK_shield, fortyK_shield, bb_exit, lens, field_plates, dr_aperture]
-
-    # Define beamline object
-    beamline = Beamline(beamline_elements)
-
-    # Define a simulator object
-    simulator = TrajectorySimulator()
-
-    # Run simulator
-    aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
-    molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e6), apertures_of_interest = aoi)
-    simulator.counter.print()
-    print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
-    
-if __name__ == "__main__":
-    main()
