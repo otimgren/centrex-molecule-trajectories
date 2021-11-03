@@ -1,8 +1,12 @@
+![Molecular trajectories in CeNTREX](/imag/Detected_trajectories.png)
+
 # centrex-molecule-trajectories
 This is a package for simulating the trajectories molecules/atoms in molecular/atomic beam experiments, specfically developed for the needs of the CeNTREX experiment but hopefully generalizable enough for other experiments also. The package implements a Monte Carlo simulation of trajectories by generating molecules based on given initial position and velocity distributions. The simulation propagates the molecules through a set of beamline elements (e.g. apertures, guiding or slowing elements) and tracks the trajectories, how many molecules hit each beamline element and how many make it through the experiment to detection.
 
 ## Installation
-Copy the source code using git `git clone https://github.com/otimgren/centrex-molecule-trajectories.git` or by downloading and extracting the zip file from GitHub. Then run `python setup.py install` in the root folder (the one containing setup.py).
+Copy the source code using git `git clone https://github.com/otimgren/centrex-molecule-trajectories.git` or by downloading and extracting the zip file from GitHub. Then run `python setup.py install` in the root folder (the one containing setup.py). The package is then foun under `trajectories`.
+
+To simulate the effect of the electrostatic lens on trajectories, you also need to install `centrex_TlF` for calculating the force on the molecule inside the lens. This package can be found [here](https://github.com/ograsdijk/CeNTREX-TlF).
 
 ## Description
 The basic structure of the simulation code is as follows:
@@ -44,7 +48,7 @@ A class `trajectories.molecule.Molecule` is implemented for molecules. Currently
 
 ### Trajectory simulations
 Use an instance of the `trajectories.trajectrory_simulator.TrajectorySimulator` to actually run the simulations. Methods:
-- `run_simulation`: Takes as inputs the beamline, initial position and velocity distributions, how many molecules should be simulated, and a list of beamline elements of interest (molecules that hit any of these will have their trajectories saved).
+- `run_simulation`: Takes as inputs the beamline, initial position and velocity distributions, how many molecules should be simulated, and a list of beamline elements of interest (molecules that hit any of these will have their trajectories saved). Returns a list of molecules, whose trajectories can then be post processed (working on adding some post processing functionality).
 - `run_simulation_parallel`: Same as `run_simulation` but runs in parallel. Use `n_jobs` to control number of processes used
 
 The `TrajectorySimulator` also initializes an instance of the `Counter` class which is used to keep track of how many molecules hit each beamline element, even if the trajectories of molecules hitting some of these elements are not saved to conserve memory.
