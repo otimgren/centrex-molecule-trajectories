@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,10 +14,6 @@ class Beamline:
 
     def __post_init__(self):
         self.sort_elements()
-
-        # Give the elements indices
-        for i, element in enumerate(self.elements):
-            element.index = i
 
     def propagate_through(self, molecule, name: str = "ES lens"):
         """

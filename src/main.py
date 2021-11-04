@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from trajectories.beamline_elements import CircularAperture, ElectrostaticLens, FieldPlates, RectangularAperture
 from trajectories.beamline import Beamline
 from trajectories.trajectory_simulator import TrajectorySimulator
@@ -15,20 +17,25 @@ def main():
     dr_aperture = RectangularAperture(z0 = field_plates.z1 + 39.9*m_per_in, L = 0.25*m_per_in, name = "DR aperture",
                                       w = 0.018, h = 0.03)
 
-    # Collect beamline elements into a list
-    beamline_elements = [fourK_shield, fortyK_shield, bb_exit, lens, field_plates, dr_aperture]
+    # # Collect beamline elements into a list
+    # beamline_elements = [fourK_shield, fortyK_shield, bb_exit, lens, field_plates, dr_aperture]
 
-    # Define beamline object
-    beamline = Beamline(beamline_elements)
+    # # Define beamline object
+    # beamline = Beamline(beamline_elements)
 
-    # Define a simulator object
-    simulator = TrajectorySimulator()
+    # # Define a simulator object
+    # simulator = TrajectorySimulator()
 
-    # Run simulator
-    aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
-    molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e6), apertures_of_interest = aoi)
-    simulator.counter.print()
-    print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
+    # # Run simulator
+    # aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
+    # molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e5), apertures_of_interest = aoi)
+    # simulator.counter.print()
+    # print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
+
+
+    file_path = Path("./saved_data/test.hdf")
+    run_name = 'test'
+    bb_exit.save_to_hdf(filepath=file_path, parent_group_path=run_name)
     
 if __name__ == "__main__":
     main()

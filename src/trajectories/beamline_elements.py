@@ -1,16 +1,23 @@
-import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from multiprocessing import Value
 import pickle
-from scipy.interpolate import interp1d
 from os.path import exists
-from stark_potential import stark_potential
-from centrex_TlF.states import UncoupledBasisState, State
-from beamline import Beamline
-from molecule import Molecule
+from typing import Union
+from pathlib import Path
+
+import h5py
+from h5py._hl import group
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import numpy as np
+from scipy.interpolate import interp1d
 from scipy.constants import g
+
+from .beamline import Beamline
+from centrex_TlF.states import UncoupledBasisState, State
+from .molecule import Molecule
+from .stark_potential import stark_potential
 
 @dataclass
 class BeamlineElement(ABC):
@@ -23,7 +30,6 @@ class BeamlineElement(ABC):
     L: float # Length or thickness of element along Z
     x0: float = 0. # X-coordinate of center of the element (0 corresponds to being on straight line from cold cell)
     y0: float = 0. # Y-coordinate of center of element (0 corresponds to being on straight line from cold cell)
-    index: int = None # Index that tells the order of beamline elements in a beamline
 
     def __post_init__(self):
         self.z1 = self.z0 + self.L
@@ -46,7 +52,26 @@ class BeamlineElement(ABC):
         Plots the beamline element on the provided axes (axes[0] should be XZ plane and axes[1] YZ plane)
         """
 
-    
+    def save_to_hdf(self, filepath: Path, parent_group_path: str) -> None:
+        """
+        Saves the beamline element to an hdf file 
+        """
+        # Open the hdf file
+        with h5py.File(filepath, 'a') as f:
+            try:
+                # Create a group for the beamline element
+                group_path = parent_group_path + "/" + self.name
+                f.create_group(group_path)
+
+                # Loop over the attributes of the beamline element and save them to the attributes
+                # of the group
+                print(vars(self))
+                for key, value in vars(self).items():
+                    f[group_path].attrs[key] = value
+            
+            except ValueError:
+                "Group already exists!" 
+        
 @dataclass
 class CircularAperture(BeamlineElement):
     """
@@ -86,6 +111,7 @@ class CircularAperture(BeamlineElement):
         of an incoming molecule is two (entering and exiting)
         """
         return 2
+    
 
     def plot(self, axes):
         """
@@ -345,6 +371,24 @@ class ElectrostaticLens(BeamlineElement):
         axes[1].add_patch(rect3)
         axes[1].add_patch(rect4)
 
+    def save_to_hdf(self, filepath: Path, parent_group_path: str) -> None:
+        """
+        Saves the beamline element to an hdf file 
+        """
+        # Open the hdf file
+        with h5py.File(filepath, 'a') as f:
+            # Create a group for the beamline element
+            group_path = parent_group_path + "/" + self.name
+            f.create_group(group_path)
+
+            # Loop over the attributes of the beamline element and save them to the attributes
+            # of the group
+            for key, value in vars(self):
+                if key != 'state':
+                    f[group_path].attrs[key] = value
+
+                else:
+                    f[group_path].attrs[key] = value.__repr__()
 
     def lens_acceleration(self, x):
         """
@@ -420,6 +464,13 @@ def main():
     accs  = np.array([np.array(lens.lens_acceleration(np.array((r,0,0)))[0]) for r in rs])
     ax.plot(rs, accs)
     plt.show()
+
+    file_path = Path("./saved_data/test.hdf")
+    run_name = 'test'
+    aperture.save_to_hdf(filepath=file_path, parent_group_path=run_name)
+
+
+
 
 if __name__ == '__main__':
     main()

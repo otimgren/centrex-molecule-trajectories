@@ -1,7 +1,6 @@
-from dataclasses import dataclass
+import numpy as np
 from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
-import numpy as np
 from tqdm import tqdm
 from typing import List
 
@@ -114,9 +113,12 @@ class TrajectorySimulator:
         # Merge counters
         self.counter.merge_counters(counters)
 
-        # Plot molecule trajectories
-        for molecule in molecules:
-            molecule.plot_trajectory(axes)
+        # Plot molecule trajectories (but not too many)
+        n_max = np.min(10000, len(molecules))
+        n = 0
+        while n < n_max:
+            molecules[n].plot_trajectory(axes)
+            n += 1
             
         plt.show()
 
@@ -159,7 +161,7 @@ class Counter:
         else:
             return 0
 
-    def merge_counters(self, others: List):
+    def merge_counters(self, others: List) -> None:
         """
         Merges self with other counters contained in a list.
         """

@@ -30,8 +30,8 @@ def main():
     simulator = TrajectorySimulator()
 
     # Run simulator
-    aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"] # Define apertures of interest so 
-    molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e6), apertures_of_interest = aoi)
+    aoi = ["Detected"]#"DR aperture", "Detected", "Field plates", "Inside lens"] # Define apertures of interest so 
+    molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e5), apertures_of_interest = aoi)
     simulator.counter.print()
     print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
     
