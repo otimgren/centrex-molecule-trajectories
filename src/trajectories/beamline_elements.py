@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from multiprocessing import Value
 import pickle
 from os.path import exists
-from typing import Union
 from pathlib import Path
 
 import h5py
@@ -63,9 +62,11 @@ class BeamlineElement(ABC):
                 group_path = parent_group_path + "/" + self.name
                 f.create_group(group_path)
 
+                # Write the name of the beamline element class into file
+                f[group_path].attrs['class'] = type(self).__name__
+
                 # Loop over the attributes of the beamline element and save them to the attributes
                 # of the group
-                print(vars(self))
                 for key, value in vars(self).items():
                     f[group_path].attrs[key] = value
             
