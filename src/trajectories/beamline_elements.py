@@ -6,7 +6,6 @@ from os.path import exists
 from pathlib import Path
 
 import h5py
-from h5py._hl import group
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
