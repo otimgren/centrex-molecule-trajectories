@@ -3,11 +3,9 @@ from dataclasses import dataclass
 from multiprocessing import Value
 import pickle
 from os.path import exists
-from typing import Union
 from pathlib import Path
 
 import h5py
-from h5py._hl import group
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
