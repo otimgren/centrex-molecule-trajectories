@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+import h5py
 
 @dataclass
 class Beamline:
@@ -74,6 +75,19 @@ class Beamline:
 
         return axes
 
+    def save_to_hdf(self, filepath: Path, parent_group_path: str) -> None:
+        """
+        Saves the beamline to an hdf file
+        """
+        # Open the hdf file
+        with h5py.File(filepath, 'a') as f:
+            # Create a group for the beamline 
+            group_path = parent_group_path + "/beamline/"
+            f.create_group(group_path)
+
+            # Loop over the beamline elements and save them to the file
+            for element in self.elements:
+                element.save_to_hdf(filepath, group_path)
 
 
 

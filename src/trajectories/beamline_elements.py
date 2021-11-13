@@ -70,7 +70,7 @@ class BeamlineElement(ABC):
                     f[group_path].attrs[key] = value
             
             except ValueError:
-                "Group already exists!" 
+                print("Can't save beamline element. Group already exists!") 
         
 @dataclass
 class CircularAperture(BeamlineElement):
@@ -381,12 +381,14 @@ class ElectrostaticLens(BeamlineElement):
             group_path = parent_group_path + "/" + self.name
             f.create_group(group_path)
 
+            # Write the name of the beamline element class into file
+            f[group_path].attrs['class'] = type(self).__name__
+
             # Loop over the attributes of the beamline element and save them to the attributes
             # of the group
-            for key, value in vars(self):
-                if key != 'state':
+            for key, value in vars(self).items():
+                if key != 'state' and value:
                     f[group_path].attrs[key] = value
-
                 else:
                     f[group_path].attrs[key] = value.__repr__()
 

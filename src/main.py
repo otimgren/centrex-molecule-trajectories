@@ -1,8 +1,14 @@
 from pathlib import Path
+import importlib
 
-from trajectories.beamline_elements import CircularAperture, ElectrostaticLens, FieldPlates, RectangularAperture
+from trajectories.beamline_elements import BeamlineElement, CircularAperture, ElectrostaticLens, FieldPlates, RectangularAperture
 from trajectories.beamline import Beamline
 from trajectories.trajectory_simulator import TrajectorySimulator
+from trajectories.utils import import_beamline_from_hdf
+
+from pathlib import Path
+
+import h5py
 
 def main():
     # Define the beamline elements
@@ -17,11 +23,12 @@ def main():
     dr_aperture = RectangularAperture(z0 = field_plates.z1 + 39.9*m_per_in, L = 0.25*m_per_in, name = "DR aperture",
                                       w = 0.018, h = 0.03)
 
-    # # Collect beamline elements into a list
-    # beamline_elements = [fourK_shield, fortyK_shield, bb_exit, lens, field_plates, dr_aperture]
+    # Collect beamline elements into a list
+    beamline_elements = [fourK_shield, fortyK_shield, bb_exit, lens, field_plates, dr_aperture]
 
     # # Define beamline object
-    # beamline = Beamline(beamline_elements)
+    beamline = Beamline(beamline_elements)
+    print(beamline)
 
     # # Define a simulator object
     # simulator = TrajectorySimulator()
@@ -32,10 +39,14 @@ def main():
     # simulator.counter.print()
     # print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
 
-
+    # Test saving beamline to file
     file_path = Path("./saved_data/test.hdf")
-    run_name = 'test'
-    bb_exit.save_to_hdf(filepath=file_path, parent_group_path=run_name)
-    
+    run_name = 'run10'
+    beamline.save_to_hdf(filepath=file_path, parent_group_path=run_name)
+
+    # Test importing beamline from file
+    beamline2 = import_beamline_from_hdf(file_path, run_name) 
+    print(beamline2)
+
 if __name__ == "__main__":
     main()
