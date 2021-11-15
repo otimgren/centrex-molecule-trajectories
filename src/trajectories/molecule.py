@@ -94,11 +94,17 @@ class Molecule:
         axes[0].plot(self.trajectory.x[:,2], self.trajectory.x[:,0], c = color)
         axes[1].plot(self.trajectory.x[:,2], self.trajectory.x[:,1], c = color)
 
-    def save_trajectory(self, filepath: Path, run_name: str, group_name: str):
+    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
         """
-        Saves the trajectory of the molecule to an hdf file
+        Saves the trajectory of the molecule and some info about it to an hdf file
         """
+        # Save the trajectory
         self.trajectory.save_to_hdf(filepath, run_name, group_name)
+
+        # Save info about molecule to attributes
+        with h5py.File(filepath, 'a') as f:
+            f[run_name + '/' + group_name].attrs['aperture_hit'] = self.aperture_hit
+            f[run_name + '/' + group_name].attrs['alive'] = self.alive
 
 
 class Trajectory:

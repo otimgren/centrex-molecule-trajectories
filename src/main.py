@@ -4,7 +4,7 @@ import importlib
 from trajectories.beamline_elements import BeamlineElement, CircularAperture, ElectrostaticLens, FieldPlates, RectangularAperture
 from trajectories.beamline import Beamline
 from trajectories.trajectory_simulator import TrajectorySimulator
-from trajectories.utils import import_beamline_from_hdf
+from trajectories.utils import import_sim_result_from_hdf
 
 from pathlib import Path
 
@@ -42,16 +42,13 @@ def main():
 
     filepath = Path("./saved_data/test.hdf")
     run_name = 'run10'
-    print(len(simulator.result.molecules))
-    # simulator.result.plot()
+    simulator.result.plot()
     simulator.result.save_to_hdf(filepath, run_name)
 
-    # Test saving beamline to file
-     ## beamline.save_to_hdf(filepath=file_path, parent_group_path=run_name)
-
-    # # Test importing beamline from file
-    # beamline2 = import_beamline_from_hdf(file_path, run_name) 
-    # print(beamline2)
+    # Test importing simulation result from file
+    result2 = import_sim_result_from_hdf(filepath, run_name) 
+    result2.plot()
+    result2.counter.print()
 
 if __name__ == "__main__":
     main()

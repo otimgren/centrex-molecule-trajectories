@@ -88,7 +88,7 @@ class TrajectorySimulator:
 
 class Counter:
     """
-    Counter is used to keep track of how many molecules hit each aperture during a simulation run
+    Counter is used to keep track of how many molecules hit each aperture during a simulation run.
     """
     def __init__(self) -> None:
         """
@@ -98,7 +98,7 @@ class Counter:
 
     def increment_counter(self, aperture_hit: str) -> None:
         """
-        Increments the counter for given aperture
+        Increments the counter for given aperture.
         """
         if aperture_hit in self.counter_dict.keys():
             self.counter_dict[aperture_hit] += 1
@@ -106,6 +106,9 @@ class Counter:
             self.counter_dict[aperture_hit] = 1
             
     def print(self) -> None:
+        """
+        Prints the number of molecules that hit each beamline element.
+        """
         print("Number of molecules that hit each element:")
         for key, value in self.counter_dict.items():
             print(f"{key} : {value}")
@@ -219,7 +222,7 @@ class SimulationResult:
         print("Saving trajectories...")
         for i, molecule in enumerate(tqdm(self.molecules)):
             group_name = f"trajectories/molecule_{i}"
-            molecule.trajectory.save_to_hdf(filepath, run_name, group_name)
+            molecule.save_to_hdf(filepath, run_name, group_name)
 
 
 
