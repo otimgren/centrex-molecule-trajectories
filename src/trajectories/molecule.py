@@ -1,3 +1,6 @@
+from pathlib import Path
+import h5py
+from h5py._hl import group
 import numpy as np
 from dataclasses import dataclass
 from scipy.constants import g
@@ -91,6 +94,13 @@ class Molecule:
         axes[0].plot(self.trajectory.x[:,2], self.trajectory.x[:,0], c = color)
         axes[1].plot(self.trajectory.x[:,2], self.trajectory.x[:,1], c = color)
 
+    def save_trajectory(self, filepath: Path, run_name: str, group_name: str):
+        """
+        Saves the trajectory of the molecule to an hdf file
+        """
+        self.trajectory.save_to_hdf(filepath, run_name, group_name)
+
+
 class Trajectory:
     """
     Class that stores information about the trajectory of a molecule flying through the beamline.
@@ -149,8 +159,24 @@ class Trajectory:
         self.a = self.a[np.all(np.isfinite(self.a), axis = 1),:]
         self.t = self.t[np.isfinite(self.t)]
 
+    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str) -> None:
+        """
+        Saves the trajectory to an hdf file.
+        """
+        # Start by getting rid of any nans
+        self.drop_nans()
 
+        # Open the hdf file and save the positions, velocities, accelerations and times
+        with h5py.File(filepath, 'a') as f:
+            # Create the group
+            group_path = run_name + '/' + group_name
+            f.create_group(group_path)
 
+            # Add datasets to the group
+            f[group_path].create_dataset("x", self.x)
+            f[group_path].create_dataset("v", self.v)
+            f[group_path].create_dataset("a", self.a)
+            f[group_path].create_dataset("t", self.t)
     
 
         

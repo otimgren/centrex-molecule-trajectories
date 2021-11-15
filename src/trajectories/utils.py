@@ -23,7 +23,6 @@ def import_element_from_hdf(element_name: str, filepath: Path, run_name: str) ->
     class_ = getattr(module, class_name)
     
     # Figure out the arguments needed for instantiation of class
-    signature = inspect.signature(class_.__init__)
     init_arg_names = list(inspect.signature(class_.__init__).parameters)[1:]
     
     # Dictionary of of arguments
@@ -48,3 +47,11 @@ def import_beamline_from_hdf(filepath: Path, run_name: str):
 
     # Make the beamline based on the elements and return it
     return Beamline(elements)
+
+def import_trajectories_from_hdf(filepath: Path, run_name: str):
+    """
+    Imports trajectories from an hdf file
+    """
+    #to do
+    ...
+    

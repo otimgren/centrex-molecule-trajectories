@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
+
 from matplotlib import scale
 import numpy as np
 from scipy.stats import norm, uniform
 import matplotlib.pyplot as plt
-from functools import partial
+import h5py
 
 class Distribution(ABC):
     """
@@ -16,6 +18,13 @@ class Distribution(ABC):
     def draw(self, n: int) -> np.ndarray:
         """
         Draws n samples from the distribution
+        """
+        ...
+
+    @abstractmethod
+    def save_to_hdf(self, filepath: Path, run_name: str, group_name:str):
+        """
+        Save the distribution to an hdf file
         """
         ...
 
@@ -36,7 +45,7 @@ class GaussianDistribution(Distribution):
         ax.plot(x, self.dist.pdf(x, loc = self.mean, scale = self.sigma))
 
 @dataclass
-class StandardVelocityDistribution(Distribution):
+class CeNTREXVelocityDistribution(Distribution):
     """
     This is the "standard" initial velocity distribution that I expect will be used in most simulations.
     Gaussian velocity distributions for each direction, but along Z we have a non-zero mean and smaller
@@ -51,13 +60,39 @@ class StandardVelocityDistribution(Distribution):
     sigmaz: float = 16.0  # Spread in velocity along Z in m/s
 
     def draw(self, n: int) -> np.ndarray:
+        """
+        Draws n samples from the distribution
+        """
         return np.array((GaussianDistribution(self.vx, self.sigmax).draw(n),
                          GaussianDistribution(self.vy, self.sigmay).draw(n),
                          GaussianDistribution(self.vz, self.sigmaz).draw(n)
                         ))
+    
+    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
+        """
+        Saves the distribution to an hdf file
+        """
+        # Open the hdf file
+        with h5py.File(filepath, 'a') as f:
+            try:
+                # Create a group for the velocity distribution
+                group_path = run_name + "/velocity_distribution" 
+                f.create_group(group_path)
+
+                # Write the name of the distribution class into file
+                f[group_path].attrs['class'] = type(self).__name__
+
+                # Loop over the attributes of the velocity distribution and save them to the attributes
+                # of the group
+                for key, value in vars(self).items():
+                    f[group_path].attrs[key] = value
+            
+            except ValueError:
+                raise ValueError("Can't save velocity distribution. Group already exists!") 
+    
 
 @dataclass
-class StandardPositionDistribution(Distribution):
+class CeNTREXPositionDistribution(Distribution):
     """
     The standard initial position distribution that I expect will be used for most simulations. Initial positions
     are assumed uniformly distributed on a disc at the "zone of freezing" where collisions between molecules are
@@ -68,12 +103,36 @@ class StandardPositionDistribution(Distribution):
     z: float = 0.25*0.0254 # Z-position of zone of freezing
 
     def draw(self, n: int) -> np.ndarray:
+        """
+        Draws n samples from the distribution
+        """
         theta = uniform.rvs(size = n)*2*np.pi
         r = np.sqrt(uniform.rvs(size = n)) * self.d/2
 
         return np.array((r*np.cos(theta), r*np.sin(theta), np.full(n,self.z)))
 
 
+    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
+        """
+        Saves the distribution to an hdf file
+        """
+        # Open the hdf file
+        with h5py.File(filepath, 'a') as f:
+            try:
+                # Create a group for the position distribution
+                group_path = run_name + "/position_distribution" 
+                f.create_group(group_path)
+
+                # Write the name of the distribution class into file
+                f[group_path].attrs['class'] = type(self).__name__
+
+                # Loop over the attributes of the position distribution and save them to the attributes
+                # of the group
+                for key, value in vars(self).items():
+                    f[group_path].attrs[key] = value
+            
+            except ValueError:
+                raise ValueError("Can't save position distribution. Group already exists!") 
 
 
 

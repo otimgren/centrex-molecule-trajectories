@@ -1,4 +1,5 @@
 *interpolation_functions/*
+*.hdf
 *.desktop.ini*
 *.ipynb
 # Byte-compiled / optimized / DLL files
