@@ -31,7 +31,8 @@ def main():
 
     # Run simulator
     aoi = ["Detected"]#"DR aperture", "Detected", "Field plates", "Inside lens"] # Define apertures of interest so 
-    molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e5), apertures_of_interest = aoi)
+    run_name = 'Electrostatic lens simulation'
+    simulator.run_simulation(beamline, run_name, N_traj=int(1e5), apertures_of_interest = aoi, n_jobs = 10)
     simulator.counter.print()
     print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
     

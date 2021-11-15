@@ -50,8 +50,21 @@ def import_beamline_from_hdf(filepath: Path, run_name: str):
 
 def import_trajectories_from_hdf(filepath: Path, run_name: str):
     """
-    Imports trajectories from an hdf file
+    Imports molecular trajectories from an hdf file
     """
     #to do
     ...
-    
+
+def import_distribution_from_hdf(filepath: Path, run_name: str):
+   """
+   Imports a position or velocity distribution from an hdf file 
+   """ 
+    # to do
+   ...
+
+def import_counter_from_hdf():
+    """
+    Imports a counter from an hdf file
+    """
+    # to do
+    ...

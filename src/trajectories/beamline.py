@@ -16,17 +16,12 @@ class Beamline:
     def __post_init__(self):
         self.sort_elements()
 
-    def propagate_through(self, molecule, name: str = "ES lens"):
+    def propagate_through(self, molecule):
         """
         Propagates a molecule through the beamline by propagating a molecule through each of the beamline elements.
         """
         # Loop over elements and propagate molecule through them
         for element in self.elements:
-            # If molecule has made it to electrostatic lens, add more entries to trajectory
-            if element.name == name:
-                beamline_post_lens = Beamline(self.elements[self.find_element(name).index:])
-                molecule.trajectory.add_steps(beamline_post_lens)
-
             # Propagate the molecule through the current element
             element.propagate_through(molecule)
 
@@ -75,14 +70,14 @@ class Beamline:
 
         return axes
 
-    def save_to_hdf(self, filepath: Path, parent_group_path: str) -> None:
+    def save_to_hdf(self, filepath: Path, run_name: str) -> None:
         """
         Saves the beamline to an hdf file
         """
         # Open the hdf file
         with h5py.File(filepath, 'a') as f:
             # Create a group for the beamline 
-            group_path = parent_group_path + "/beamline/"
+            group_path = run_name + "/beamline/"
             f.create_group(group_path)
 
             # Loop over the beamline elements and save them to the file

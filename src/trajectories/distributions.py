@@ -44,6 +44,12 @@ class GaussianDistribution(Distribution):
         x = self.mean + np.linspace(-5,5,1000)*self.sigma
         ax.plot(x, self.dist.pdf(x, loc = self.mean, scale = self.sigma))
 
+    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
+        """
+        Method needs to be defined but is not implemented
+        """
+        raise NotImplementedError("Saving GaussianDistribution to hdf is not implemented. Save child class instead.") 
+
 @dataclass
 class CeNTREXVelocityDistribution(Distribution):
     """
@@ -68,7 +74,7 @@ class CeNTREXVelocityDistribution(Distribution):
                          GaussianDistribution(self.vz, self.sigmaz).draw(n)
                         ))
     
-    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
+    def save_to_hdf(self, filepath: Path, run_name: str):
         """
         Saves the distribution to an hdf file
         """
@@ -112,7 +118,7 @@ class CeNTREXPositionDistribution(Distribution):
         return np.array((r*np.cos(theta), r*np.sin(theta), np.full(n,self.z)))
 
 
-    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
+    def save_to_hdf(self, filepath: Path, run_name: str):
         """
         Saves the distribution to an hdf file
         """

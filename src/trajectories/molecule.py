@@ -173,10 +173,10 @@ class Trajectory:
             f.create_group(group_path)
 
             # Add datasets to the group
-            f[group_path].create_dataset("x", self.x)
-            f[group_path].create_dataset("v", self.v)
-            f[group_path].create_dataset("a", self.a)
-            f[group_path].create_dataset("t", self.t)
+            f[group_path].create_dataset("x", data = self.x)
+            f[group_path].create_dataset("v", data = self.v)
+            f[group_path].create_dataset("a", data = self.a)
+            f[group_path].create_dataset("t", data = self.t)
     
 
         

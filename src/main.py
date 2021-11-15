@@ -30,23 +30,28 @@ def main():
     beamline = Beamline(beamline_elements)
     print(beamline)
 
-    # # Define a simulator object
-    # simulator = TrajectorySimulator()
+    # Define a simulator object
+    simulator = TrajectorySimulator()
 
-    # # Run simulator
-    # aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
-    # molecules = simulator.run_simulation_parallel(beamline, N_traj=int(1e5), apertures_of_interest = aoi)
-    # simulator.counter.print()
-    # print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
+    # Run simulator
+    aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
+    simulator.run_simulation(beamline, 'test', N_traj=int(1e4), apertures_of_interest = aoi,
+                             n_jobs = 10)
+    simulator.counter.print()
+    print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
+
+    filepath = Path("./saved_data/test.hdf")
+    run_name = 'run10'
+    print(len(simulator.result.molecules))
+    # simulator.result.plot()
+    simulator.result.save_to_hdf(filepath, run_name)
 
     # Test saving beamline to file
-    file_path = Path("./saved_data/test.hdf")
-    run_name = 'run10'
-    beamline.save_to_hdf(filepath=file_path, parent_group_path=run_name)
+     ## beamline.save_to_hdf(filepath=file_path, parent_group_path=run_name)
 
-    # Test importing beamline from file
-    beamline2 = import_beamline_from_hdf(file_path, run_name) 
-    print(beamline2)
+    # # Test importing beamline from file
+    # beamline2 = import_beamline_from_hdf(file_path, run_name) 
+    # print(beamline2)
 
 if __name__ == "__main__":
     main()
