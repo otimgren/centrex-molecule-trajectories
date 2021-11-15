@@ -19,47 +19,7 @@ class TrajectorySimulator:
 
     def run_simulation(self, beamline: Beamline, name:str = "ES lens",
                        vdist = StandardVelocityDistribution(), xdist = StandardPositionDistribution(),  
-                       N_traj: int = 1000, apertures_of_interest = []) -> List:
-        """
-        Simulates N trajectories of molecules flying through the beamline
-        """
-        # To conserve memory, doing the trajectories in loops
-        N_loops = 100
-        N = int(N_traj/N_loops)
-        
-        # Plot beamline
-        axes = beamline.plot()
-        
-        for _ in tqdm(range(N_loops)):
-            # Generate desired number of initial positions and velocities
-            vs = vdist.draw(N)
-            xs = xdist.draw(N)
-
-            # Loop over number of desired trajectories
-            molecules = []
-            for i in range(N):
-                # Initialize a molecule
-                molecule = Molecule()
-                beamline_pre_lens = Beamline(beamline.elements[:beamline.find_element(name).index])
-                molecule.init_trajectory(beamline_pre_lens, xs[:,i], vs[:,i]) 
-
-                # Propagate molecule through beamline
-                beamline.propagate_through(molecule)
-
-                # Increment counter
-                self.counter.increment_counter(molecule.aperture_hit)
-                
-                if molecule.aperture_hit in apertures_of_interest:
-                    molecule.plot_trajectory(axes)
-                    molecules.append(molecule)
-
-        plt.show()
-
-        return molecules
-
-    def run_simulation_parallel(self, beamline: Beamline, name:str = "ES lens",
-                       vdist = StandardVelocityDistribution(), xdist = StandardPositionDistribution(),  
-                       N_traj: int = 1000, apertures_of_interest = [], n_jobs = 10) -> List:
+                       N_traj: int = 1000, apertures_of_interest = [], n_jobs = 1) -> List:
         """
         Simulates N_traj trajectories of molecules flying through the beamline using parallel processing.
         """
