@@ -3,6 +3,7 @@ Defines the beamline used for simulating the effect of the electrostatic lens ba
 results here are the same as using the old code.
 """
 
+from pathlib import Path
 from trajectories.beamline_elements import CircularAperture, RectangularAperture, ElectrostaticLens, FieldPlates
 from trajectories.beamline import Beamline
 from trajectories.trajectory_simulator import TrajectorySimulator
@@ -30,11 +31,16 @@ def main():
     simulator = TrajectorySimulator()
 
     # Run simulator
-    aoi = ["Detected"]#"DR aperture", "Detected", "Field plates", "Inside lens"] # Define apertures of interest so 
-    run_name = 'Electrostatic lens simulation'
-    simulator.run_simulation(beamline, run_name, N_traj=int(1e5), apertures_of_interest = aoi, n_jobs = 10)
+    aoi = ["Detected", "DR aperture", "Field plates", "Inside lens"] # Define apertures of interest so 
+    run_name = 'Electrostatic lens simulation 11/15/2021'
+    simulator.run_simulation(beamline, run_name, N_traj=int(1e8), apertures_of_interest = aoi, n_jobs = 10)
     simulator.counter.print()
     print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
+
+    # Save results to file
+    filepath = Path("./saved_data/lens_simulation_beamline.hdf")
+    simulator.result.save_to_hdf(filepath, run_name)
+
     
 if __name__ == "__main__":
     main()
