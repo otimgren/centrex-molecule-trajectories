@@ -4,6 +4,7 @@ import inspect
 from typing import List
 
 import h5py
+from tqdm import tqdm
 
 
 from .beamline import Beamline
@@ -63,7 +64,8 @@ def import_trajectories_from_hdf(filepath: Path, run_name: str, group_name: str 
 
         # Loop over the datasets and make a list of molecules
         molecules = []
-        for dataset_name in dataset_names:
+        print("Importing trajectories...")
+        for dataset_name in tqdm(dataset_names):
             # Get trajectory data for the molecule
             x = f[run_name + '/' + group_name + '/' + dataset_name]['x'][()]
             v = f[run_name + '/' + group_name + '/' + dataset_name]['v'][()]
