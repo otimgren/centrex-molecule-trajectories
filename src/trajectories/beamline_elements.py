@@ -387,8 +387,10 @@ class ElectrostaticLens(BeamlineElement):
             # Loop over the attributes of the beamline element and save them to the attributes
             # of the group
             for key, value in vars(self).items():
-                if key != 'state' and value:
+                if key not in ['state', 'a_interp'] and value:
                     f[group_path].attrs[key] = value
+                elif key == 'a_interp':
+                    pass
                 else:
                     f[group_path].attrs[key] = value.__repr__()
 

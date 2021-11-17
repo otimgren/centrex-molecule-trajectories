@@ -51,6 +51,8 @@ class Beamline:
             if element.name == name:
                 return element
 
+        print(f"Element with name '{name}' not found in beamline")
+
     def plot(self):
         """
         Plots the beamline

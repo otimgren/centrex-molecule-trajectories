@@ -1,14 +1,14 @@
 from pathlib import Path
-import importlib
+
+import matplotlib.pyplot as plt
 
 from trajectories.beamline_elements import BeamlineElement, CircularAperture, ElectrostaticLens, FieldPlates, RectangularAperture
 from trajectories.beamline import Beamline
+from trajectories.post_processing import find_radial_pos_dist
 from trajectories.trajectory_simulator import TrajectorySimulator
 from trajectories.utils import import_sim_result_from_hdf
 
-from pathlib import Path
 
-import h5py
 
 def main():
     # Define the beamline elements
@@ -28,27 +28,53 @@ def main():
 
     # # Define beamline object
     beamline = Beamline(beamline_elements)
-    print(beamline)
+    # print(beamline)
 
     # Define a simulator object
     simulator = TrajectorySimulator()
 
     # Run simulator
-    aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
-    simulator.run_simulation(beamline, 'test', N_traj=int(1e4), apertures_of_interest = aoi,
-                             n_jobs = 10)
-    simulator.counter.print()
-    print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
+    # aoi = ["DR aperture", "Detected", "Field plates", "Inside lens"]
+    # simulator.run_simulation(beamline, 'test', N_traj=int(1e4), apertures_of_interest = aoi,
+    #                          n_jobs = 10)
+    # simulator.counter.print()
+    # print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
 
-    filepath = Path("./saved_data/test.hdf")
-    run_name = 'run10'
-    simulator.result.plot()
-    simulator.result.save_to_hdf(filepath, run_name)
+    filepath = Path("./saved_data/lens_simulation_beamline.hdf")
+    run_name = 'Electrostatic lens simulation 11/15/2021 - 1e6'
+    # simulator.result.plot()
+    # simulator.result.save_to_hdf(filepath, run_name)
 
     # Test importing simulation result from file
     result2 = import_sim_result_from_hdf(filepath, run_name) 
-    result2.plot()
+    # result2.plot()
     result2.counter.print()
+
+    # Test getting the radial positions at a given position
+    z = dr_aperture.z0
+    rho = find_radial_pos_dist(result2, z)
+    print(rho.shape)
+    print(rho)
+
+    # Plot a 2D histogram of the position distribution
+    fig, ax = plt.subplots(figsize = (16,9))
+    ax.hist2d(rho[:,0], rho[:,1], bins = 25)
+    ax.set_xlabel("X-position / m")
+    ax.set_ylabel("Y-position / m")
+    plt.show()
+
+    # Plot 1D histograms for each axis
+    # X-position
+    fig, ax = plt.subplots(figsize = (16,9))
+    ax.hist(rho[:,0], bins = 25)
+    ax.set_xlabel("X-position / m")
+    plt.show()
+
+    # Y-position
+    fig, ax = plt.subplots(figsize = (16,9))
+    ax.hist(rho[:,1], bins = 25)
+    ax.set_xlabel("Y-position / m")
+    plt.show()
 
 if __name__ == "__main__":
     main()

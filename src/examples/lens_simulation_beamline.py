@@ -31,7 +31,7 @@ def main():
     simulator = TrajectorySimulator()
 
     # Run simulator
-    aoi = ["Detected", "DR aperture", "Field plates", "Inside lens"] # Define apertures of interest so 
+    aoi = ["Detected", "DR aperture", "Field plates", "Inside lens"] # Define apertures of interest
     run_name = 'Electrostatic lens simulation 11/15/2021 - 1e6'
     simulator.run_simulation(beamline, run_name, N_traj=int(1e6), apertures_of_interest = aoi, n_jobs = 10)
     simulator.counter.print()

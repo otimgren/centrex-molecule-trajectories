@@ -94,17 +94,18 @@ class Molecule:
         axes[0].plot(self.trajectory.x[:,2], self.trajectory.x[:,0], c = color)
         axes[1].plot(self.trajectory.x[:,2], self.trajectory.x[:,1], c = color)
 
-    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str):
+    def save_to_hdf(self, file: h5py.File, run_name: str, group_name: str):
         """
         Saves the trajectory of the molecule and some info about it to an hdf file
         """
         # Save the trajectory
-        self.trajectory.save_to_hdf(filepath, run_name, group_name)
+        self.trajectory.save_to_hdf(file, run_name, group_name)
 
         # Save info about molecule to attributes
-        with h5py.File(filepath, 'a') as f:
-            f[run_name + '/' + group_name].attrs['aperture_hit'] = self.aperture_hit
-            f[run_name + '/' + group_name].attrs['alive'] = self.alive
+        file[run_name + '/' + group_name].attrs['aperture_hit'] = self.aperture_hit
+        file[run_name + '/' + group_name].attrs['alive'] = self.alive
+
+
 
 
 class Trajectory:
@@ -165,7 +166,7 @@ class Trajectory:
         self.a = self.a[np.all(np.isfinite(self.a), axis = 1),:]
         self.t = self.t[np.isfinite(self.t)]
 
-    def save_to_hdf(self, filepath: Path, run_name: str, group_name: str) -> None:
+    def save_to_hdf(self, file: h5py.File, run_name: str, group_name: str) -> None:
         """
         Saves the trajectory to an hdf file.
         """
@@ -173,16 +174,15 @@ class Trajectory:
         self.drop_nans()
 
         # Open the hdf file and save the positions, velocities, accelerations and times
-        with h5py.File(filepath, 'a') as f:
-            # Create the group
-            group_path = run_name + '/' + group_name
-            f.create_group(group_path)
+        # Create the group
+        group_path = run_name + '/' + group_name
+        file.create_group(group_path)
 
-            # Add datasets to the group
-            f[group_path].create_dataset("x", data = self.x)
-            f[group_path].create_dataset("v", data = self.v)
-            f[group_path].create_dataset("a", data = self.a)
-            f[group_path].create_dataset("t", data = self.t)
+        # Add datasets to the group
+        file[group_path].create_dataset("x", data = self.x)
+        file[group_path].create_dataset("v", data = self.v)
+        file[group_path].create_dataset("a", data = self.a)
+        file[group_path].create_dataset("t", data = self.t)
     
 
         

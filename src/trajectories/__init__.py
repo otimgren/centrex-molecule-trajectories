@@ -1,1 +1,2 @@
-from . import beamline_elements, beamline, molecule, stark_potential, distributions, trajectory_simulator, utils
+from . import (beamline_elements, beamline, distributions, molecule, post_processing, 
+                stark_potential, trajectory_simulator, utils)

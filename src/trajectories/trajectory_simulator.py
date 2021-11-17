@@ -220,9 +220,10 @@ class SimulationResult:
         Saves a list of molecule trajectories to an hdf file
         """
         print("Saving trajectories...")
-        for i, molecule in enumerate(tqdm(self.molecules)):
-            group_name = f"trajectories/molecule_{i}"
-            molecule.save_to_hdf(filepath, run_name, group_name)
+        with h5py.File(filepath, 'a') as f:
+            for i, molecule in enumerate(tqdm(self.molecules)):
+                group_name = f"trajectories/molecule_{i}"
+                molecule.save_to_hdf(f, run_name, group_name)
 
 
 
