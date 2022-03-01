@@ -43,18 +43,26 @@ def main():
 
     # Define the states whose trajectories will be simulated (the nuclear spin part doesn't matter)
     states = [
-        1*UncoupledBasisState(J = 0, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
-                                P = +1, electronic_state= 'X'),
-        1*UncoupledBasisState(J = 1, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        # 1*UncoupledBasisState(J = 0, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        #                         P = +1, electronic_state= 'X'),
+        # 1*UncoupledBasisState(J = 1, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        #                         P = -1, electronic_state= 'X'),
+        # 1*UncoupledBasisState(J = 1, mJ = 1, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        #                         P = -1, electronic_state= 'X'),
+        # 1*UncoupledBasisState(J = 2, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        #                         P = +1, electronic_state= 'X'),
+        # 1*UncoupledBasisState(J = 2, mJ = 1, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        #                         P = +1, electronic_state= 'X'),
+        # 1*UncoupledBasisState(J = 2, mJ = 2, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        #                         P = +1, electronic_state= 'X'),
+        1*UncoupledBasisState(J = 3, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
                                 P = -1, electronic_state= 'X'),
-        1*UncoupledBasisState(J = 1, mJ = 1, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+        1*UncoupledBasisState(J = 3, mJ = 1, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
                                 P = -1, electronic_state= 'X'),
-        1*UncoupledBasisState(J = 2, mJ = 0, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
-                                P = +1, electronic_state= 'X'),
-        1*UncoupledBasisState(J = 2, mJ = 1, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
-                                P = +1, electronic_state= 'X'),
-        1*UncoupledBasisState(J = 2, mJ = 2, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
-                                P = +1, electronic_state= 'X')
+        1*UncoupledBasisState(J = 3, mJ = 2, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+                                P = -1, electronic_state= 'X'),
+        1*UncoupledBasisState(J = 3, mJ = 3, I1 = 1/2, m1 = 1/2, I2 = 1/2, m2 = 1/2, Omega=0,
+                                P = -1, electronic_state= 'X')
     ]
 
     # Loop over states and run the simulation
