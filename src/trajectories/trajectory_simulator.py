@@ -1,23 +1,29 @@
 from copy import copy
 from dataclasses import dataclass
-from joblib import Parallel, delayed
-import matplotlib.pyplot as plt
-import numpy as np
 from os import path
 from pathlib import Path
 from typing import List
 
 import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from .beamline import Beamline
-from .distributions import CeNTREXPositionDistribution, CeNTREXVelocityDistribution, Distribution
+from .distributions import (
+    CeNTREXPositionDistribution,
+    CeNTREXVelocityDistribution,
+    Distribution,
+)
 from .molecule import Molecule
+
 
 class TrajectorySimulator:
     """
     Class that is used to run trajectory simulations and to store the results.
     """
+
     def __init__(self) -> None:
         # Initialize a counter that keeps track of how many molecules hit each beamline element
         self.counter = Counter()
@@ -25,17 +31,23 @@ class TrajectorySimulator:
         # Initialize a dictionary that will store results
         self.results = {}
 
-    def run_simulation(self, beamline: Beamline, run_name: str, 
-                       vdist = CeNTREXVelocityDistribution(), xdist = CeNTREXPositionDistribution(),  
-                       N_traj: int = 1000, apertures_of_interest = [], n_jobs = 1) -> List:
+    def run_simulation(
+        self,
+        beamline: Beamline,
+        run_name: str,
+        vdist=CeNTREXVelocityDistribution(),
+        xdist=CeNTREXPositionDistribution(),
+        N_traj: int = 1000,
+        apertures_of_interest=[],
+        n_jobs=1,
+    ) -> List:
         """
         Simulates N_traj trajectories of molecules flying through the beamline using parallel processing.
         """
         # To conserve memory, doing the trajectories in loops
-        N_loops = 100*n_jobs
-        N = int(N_traj/N_loops)
-        
-        
+        N_loops = 100 * n_jobs
+        N = int(N_traj / N_loops)
+
         # Define function that will be run in parallel
         def parallel_func():
             # Initialize a counter
@@ -51,14 +63,14 @@ class TrajectorySimulator:
                 # Initialize a molecule
                 molecule = Molecule()
                 # beamline_pre_lens = Beamline(beamline.elements[:beamline.find_element(name).index])
-                molecule.init_trajectory(beamline, xs[:,i], vs[:,i]) 
+                molecule.init_trajectory(beamline, xs[:, i], vs[:, i])
 
                 # Propagate molecule through beamline
                 beamline.propagate_through(molecule)
 
                 # Increment counter
                 counter.increment_counter(molecule.aperture_hit)
-                
+
                 # If molecule hit one of the apertures of interest, save it to list
                 if molecule.aperture_hit in apertures_of_interest:
                     molecules.append(molecule)
@@ -66,8 +78,10 @@ class TrajectorySimulator:
             return molecules, counter
 
         # results is a list of tuples List[(List of molecules, Counter)]
-        results = Parallel(n_jobs = n_jobs, verbose = 1)(delayed(parallel_func)() for _ in range(N_loops))
-        
+        results = Parallel(n_jobs=n_jobs, verbose=1)(
+            delayed(parallel_func)() for _ in range(N_loops)
+        )
+
         # Make lists of molecules and counters
         molecules = []
         counters = []
@@ -84,12 +98,16 @@ class TrajectorySimulator:
 
         # Add molecules and counter to results dictionary
         self.result = SimulationResult(self.counter, beamline, xdist, vdist, molecules)
-        self.results[run_name] = SimulationResult(self.counter, beamline, xdist, vdist,  molecules)
+        self.results[run_name] = SimulationResult(
+            self.counter, beamline, xdist, vdist, molecules
+        )
+
 
 class Counter:
     """
     Counter is used to keep track of how many molecules hit each aperture during a simulation run.
     """
+
     def __init__(self) -> None:
         """
         Initializes counter dictionary
@@ -104,7 +122,7 @@ class Counter:
             self.counter_dict[aperture_hit] += 1
         else:
             self.counter_dict[aperture_hit] = 1
-            
+
     def print(self) -> None:
         """
         Prints the number of molecules that hit each beamline element.
@@ -122,7 +140,7 @@ class Counter:
             total += value
 
         if "Detected" in self.counter_dict.keys():
-            return self.counter_dict["Detected"]/total
+            return self.counter_dict["Detected"] / total
         else:
             return 0
 
@@ -142,9 +160,9 @@ class Counter:
     def save_to_hdf(self, filepath: Path, run_name: str) -> None:
         """
         Saves the counter information into an hdf file
-        """ 
+        """
         # Open the hdf file
-        with h5py.File(filepath, 'a') as f:
+        with h5py.File(filepath, "a") as f:
             try:
                 # Create a group for the counter
                 group_path = run_name + "/counter"
@@ -154,9 +172,9 @@ class Counter:
                 # of the group
                 for key, value in self.counter_dict.items():
                     f[group_path].attrs[key] = value
-            
+
             except ValueError:
-                raise ValueError("Can't save counter. Group already exists!") 
+                raise ValueError("Can't save counter. Group already exists!")
 
 
 @dataclass
@@ -165,6 +183,7 @@ class SimulationResult:
     Class used for storing results from a trajectory simulation, plotting the results and saving
     them to hdf files
     """
+
     counter: Counter
     beamline: Beamline
     xdist: Distribution
@@ -184,7 +203,7 @@ class SimulationResult:
         while n < n_max:
             self.molecules[n].plot_trajectory(axes)
             n += 1
-            
+
         plt.show()
 
     def save_to_hdf(self, filepath: Path, run_name: str) -> None:
@@ -192,23 +211,23 @@ class SimulationResult:
         Saves the simulation result to an hdf file
         """
         # Create a group for the run in the hdf file
-        with h5py.File(filepath, 'a') as f:
+        with h5py.File(filepath, "a") as f:
             try:
                 f.create_group(run_name)
 
             except ValueError:
                 # If run name already exists, ask user if it should be overwritten
                 val = input("Run name already exists. Overwrite? y/n")
-                
-                if val == 'y':
-                    del f[run_name]   
+
+                if val == "y":
+                    del f[run_name]
                     f.create_group(run_name)
-                else: 
+                else:
                     return
 
         # Loop over the attributes of the object and save them to hdf files
         attributes_dict = copy(vars(self))
-        molecules = attributes_dict.pop('molecules')
+        molecules = attributes_dict.pop("molecules")
         for _, value in attributes_dict.items():
             value.save_to_hdf(filepath, run_name)
 
@@ -220,15 +239,8 @@ class SimulationResult:
         Saves a list of molecule trajectories to an hdf file
         """
         print("Saving trajectories...")
-        with h5py.File(filepath, 'a') as f:
+        with h5py.File(filepath, "a") as f:
             for i, molecule in enumerate(tqdm(self.molecules)):
                 group_name = f"trajectories/molecule_{i}"
                 molecule.save_to_hdf(f, run_name, group_name)
-
-
-
-
-        
-
-
 

@@ -68,7 +68,11 @@ class BeamlineElement(ABC):
                 # Loop over the attributes of the beamline element and save them to the attributes
                 # of the group
                 for key, value in vars(self).items():
-                    f[group_path].attrs[key] = value
+                    try:
+                        f[group_path].attrs[key] = value
+                    except TypeError as e:
+                        print(value)
+                        raise e
 
             except ValueError:
                 print("Can't save beamline element. Group already exists!")

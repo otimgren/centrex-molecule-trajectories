@@ -151,3 +151,26 @@ class Honeycomb(BeamlineElement):
 
         return ax
 
+    def save_to_hdf(self, filepath: Path, parent_group_path: str) -> None:
+        """
+        Saves the beamline element to an hdf file 
+        """
+        # Open the hdf file
+        with h5py.File(filepath, "a") as f:
+            try:
+                # Create a group for the beamline element
+                group_path = parent_group_path + "/" + self.name
+                f.create_group(group_path)
+
+                # Write the name of the beamline element class into file
+                f[group_path].attrs["class"] = type(self).__name__
+
+                # Loop over the attributes of the beamline element and save them to the attributes
+                # of the group
+                vars_dict = vars(self).copy()
+                vars_dict.pop("patches")
+                for key, value in vars_dict.items():
+                    f[group_path].attrs[key] = value
+
+            except ValueError:
+                print("Can't save beamline element. Group already exists!")
