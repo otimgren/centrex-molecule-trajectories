@@ -6,11 +6,9 @@ results here are the same as using the old code.
 from pathlib import Path
 
 from trajectories.beamline import Beamline
-from trajectories.beamline_elements.apertures import (
-    CircularAperture,
-    FieldPlates,
-    RectangularAperture,
-)
+from trajectories.beamline_elements.apertures import (CircularAperture,
+                                                      FieldPlates,
+                                                      RectangularAperture)
 from trajectories.beamline_elements.electrostatic_lens import ElectrostaticLens
 from trajectories.trajectory_simulator import TrajectorySimulator
 

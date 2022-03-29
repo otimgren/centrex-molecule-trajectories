@@ -20,6 +20,8 @@ from ..beamline import Beamline
 from ..molecule import Molecule
 from .apertures import BeamlineElement
 
+__all__ = ["Honeycomb"]
+
 
 @dataclass
 class Honeycomb(BeamlineElement):

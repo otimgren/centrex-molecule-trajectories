@@ -17,6 +17,8 @@ from ..molecule import Molecule
 from ..stark_potential import stark_potential
 from .apertures import BeamlineElement
 
+__all__ = ["ElectrostaticLens"]
+
 
 @dataclass
 class ElectrostaticLens(BeamlineElement):

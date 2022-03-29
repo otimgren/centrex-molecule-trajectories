@@ -16,6 +16,8 @@ from ..beamline import Beamline
 from ..molecule import Molecule
 from ..stark_potential import stark_potential
 
+__all__ = ["CircularAperture", "RectangularAperture", "FieldPlates"]
+
 
 @dataclass
 class BeamlineElement(ABC):
