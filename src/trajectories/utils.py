@@ -32,7 +32,10 @@ def import_element_from_hdf(
     # Figure out the arguments needed for instantiation of class
     init_arg_names = list(inspect.signature(class_.__init__).parameters)[1:]
 
-    # Dictionary of of arguments
+    # Any arguments that are not in the hdf attributes are not needed
+    init_arg_names = list(set(init_arg_names) & set(attributes.keys()))
+
+    # Dictionary of arguments
     init_args = {key: attributes[key] for key in init_arg_names}
 
     # Initialize the beamline element and return it

@@ -190,7 +190,7 @@ class SimulationResult:
     vdist: Distribution
     molecules: List[Molecule]
 
-    def plot(self, N_max: int = 10000) -> None:
+    def plot(self, N_max: int = 10000, elements: List[str] = None) -> None:
         """
         Plots the simulation result
         """
@@ -200,8 +200,13 @@ class SimulationResult:
         # Plot molecule trajectories (but not too many)
         n_max = np.min((N_max, len(self.molecules)))
         n = 0
+        i = 0
         while n < n_max:
-            self.molecules[n].plot_trajectory(axes)
+            molecule = self.molecules[i]
+            i += 1
+            if molecule.aperture_hit not in elements:
+                continue
+            molecule.plot_trajectory(axes)
             n += 1
 
         plt.show()
