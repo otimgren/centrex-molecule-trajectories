@@ -2,11 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-from matplotlib import scale
-import numpy as np
-from scipy.stats import norm, uniform
-import matplotlib.pyplot as plt
 import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import scale
+from scipy.stats import norm, uniform
+
 
 class Distribution(ABC):
     """
@@ -138,7 +139,50 @@ class CeNTREXPositionDistribution(Distribution):
                     f[group_path].attrs[key] = value
             
             except ValueError:
-                raise ValueError("Can't save position distribution. Group already exists!") 
+                raise ValueError("Can't save position distribution. Group already exists!")
+
+@dataclass
+class GaussianPositionDistribution(Distribution):
+    """
+    Based on some results from ACME, the initial x and y position distribution
+    of the molecules is better described by a Gaussian. I got the sigmax and
+    y values from Olivier.
+    """
+    sigmax: float = 0.25*25.4/5*3.8e-3 # Sigma for the gaussian position distribution
+    sigmay: float = 0.25*25.4/5*3.8e-3 # Sigma for the gaussian position distribution
+    z: float = 0.25*0.0254 # Z-position of zone of freezing
+
+    def draw(self, n: int) -> np.ndarray:
+        """
+        Draws n samples from the distribution
+        """
+        x = GaussianDistribution(0, self.sigmax).draw(n),          
+        y = GaussianDistribution(0, self.sigmay).draw(n)
+
+        return np.vstack((x, y, np.full(n,self.z)))
+
+
+    def save_to_hdf(self, filepath: Path, run_name: str):
+        """
+        Saves the distribution to an hdf file
+        """
+        # Open the hdf file
+        with h5py.File(filepath, 'a') as f:
+            try:
+                # Create a group for the position distribution
+                group_path = run_name + "/position_distribution" 
+                f.create_group(group_path)
+
+                # Write the name of the distribution class into file
+                f[group_path].attrs['class'] = type(self).__name__
+
+                # Loop over the attributes of the position distribution and save them to the attributes
+                # of the group
+                for key, value in vars(self).items():
+                    f[group_path].attrs[key] = value
+            
+            except ValueError:
+                raise ValueError("Can't save position distribution. Group already exists!")  
 
 
 

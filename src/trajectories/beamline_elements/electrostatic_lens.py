@@ -28,7 +28,7 @@ class ElectrostaticLens(BeamlineElement):
 
     d: float = 1.75 * 0.0254  # Bore diameter of lens in m
     dz: float = 1e-3  # Spatial size of integration step that is taken inside the lens
-    V: float = 27e3  # Voltage on lens electrodes
+    V: float = 27.6e3  # Voltage on lens electrodes
     a_interp: interp1d = None
     state: State = 1 * UncoupledBasisState(
         J=2,

@@ -190,7 +190,9 @@ class SimulationResult:
     vdist: Distribution
     molecules: List[Molecule]
 
-    def plot(self, N_max: int = 10000, elements: List[str] = None) -> None:
+    def plot(
+        self, N_max: int = 10000, elements: List[str] = None, show: bool = True
+    ) -> None:
         """
         Plots the simulation result
         """
@@ -208,8 +210,10 @@ class SimulationResult:
                 continue
             molecule.plot_trajectory(axes)
             n += 1
+        if show:
+            plt.show()
 
-        plt.show()
+        return axes
 
     def save_to_hdf(self, filepath: Path, run_name: str) -> None:
         """

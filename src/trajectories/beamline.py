@@ -2,9 +2,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-import numpy as np
-import matplotlib.pyplot as plt
 import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 @dataclass
 class Beamline:
@@ -69,6 +70,8 @@ class Beamline:
         # Loop over elements and plot them
         for element in self.elements:
             element.plot(axes)
+
+        # plt.show()
 
         return axes
 

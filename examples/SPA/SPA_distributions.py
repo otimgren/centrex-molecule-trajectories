@@ -6,12 +6,11 @@ passing through the SPA region and ending up detected by the laser.
 from pathlib import Path
 
 from trajectories.beamline import Beamline
-from trajectories.beamline_elements.apertures import (
-    CircularAperture,
-    FieldPlates,
-    RectangularAperture,
-)
+from trajectories.beamline_elements.apertures import (CircularAperture,
+                                                      FieldPlates,
+                                                      RectangularAperture)
 from trajectories.beamline_elements.electrostatic_lens import ElectrostaticLens
+from trajectories.distributions import GaussianPositionDistribution
 from trajectories.trajectory_simulator import TrajectorySimulator
 
 
@@ -41,8 +40,12 @@ def main():
         z0=17.36 * m_per_in, L=0.125 * m_per_in, d=8e-3, name="RC entrance",
     )
 
+    RC_exit_aperture = CircularAperture(
+        z0=(17.36+9) * m_per_in, L=0.125 * m_per_in, d=8e-3, name="RC exit",
+    )
+
     SPA_entrance = CircularAperture(
-        z0=bb_exit.z1 + 19.6 * m_per_in,
+        z0=bb_exit.z1 + 20.5 * m_per_in,
         L=0.375 * m_per_in,
         d=1.75 * m_per_in,
         name="SPA entrance",
@@ -56,15 +59,15 @@ def main():
     )
 
     DR_entrance_aperture = CircularAperture(
-        z0=(35.37 + 11) * m_per_in, L=0.125 * m_per_in, d=8e-3, name="DR entrance",
+        z0=(35.37 + 11) * m_per_in, L=0.125 * m_per_in, d=150e-3, name="DR entrance",
     )
 
     laser = RectangularAperture(
         z0=DR_entrance_aperture.z1 + 3.02 * m_per_in,
-        L=0.125 * m_per_in,
-        name="DR aperture",
+        L=2e-3,
+        name="laser",
         w=0.05,
-        h=0.02,
+        h=0.05,
     )
 
     # Collect beamline elements into a list
@@ -73,6 +76,7 @@ def main():
         fortyK_shield,
         bb_exit,
         RC_entrance_aperture,
+        RC_exit_aperture,
         SPA_entrance,
         SPA_exit,
         DR_entrance_aperture,
@@ -92,9 +96,10 @@ def main():
     ]
 
     # Run simulator
-    run_name = "SPA position distributions - with apertures - 3-29-2022 - 1e8"
+    run_name = "SPA position distributions - apertures - ACME ini pos - 5-16-2022 - 1e9"
     simulator.run_simulation(
-        beamline, run_name, N_traj=int(1e8), apertures_of_interest=aoi, n_jobs=10
+        beamline, run_name, N_traj=int(1e9), apertures_of_interest=aoi, n_jobs=9,
+         xdist= GaussianPositionDistribution(),
     )
 
     # Print how many molecules hit each aperture what percentage of molecules make

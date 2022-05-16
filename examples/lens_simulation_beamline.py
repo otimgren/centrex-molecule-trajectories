@@ -2,13 +2,15 @@
 Defines the beamline used for simulating the effect of the electrostatic lens back when it was designed. The 
 results here are the same as using the old code.
 """
-
+import argparse
 from pathlib import Path
 
 from trajectories.beamline import Beamline
-from trajectories.beamline_elements.apertures import (CircularAperture,
-                                                      FieldPlates,
-                                                      RectangularAperture)
+from trajectories.beamline_elements.apertures import (
+    CircularAperture,
+    FieldPlates,
+    RectangularAperture,
+)
 from trajectories.beamline_elements.electrostatic_lens import ElectrostaticLens
 from trajectories.trajectory_simulator import TrajectorySimulator
 
@@ -31,6 +33,21 @@ def main():
         d=4 * m_per_in,
         name="BB exit",
     )
+
+    SPA_entrance = CircularAperture(
+        z0=bb_exit.z1 + 19.6 * m_per_in,
+        L=0.375 * m_per_in,
+        d=1.75 * m_per_in,
+        name="SPA entrance",
+    )
+
+    SPA_exit = CircularAperture(
+        z0=SPA_entrance.z1 + 9.625 * m_per_in,
+        L=0.375 * m_per_in,
+        d=1.75 * m_per_in,
+        name="SPA exit",
+    )
+
     lens = ElectrostaticLens(z0=bb_exit.z1 + 33 * m_per_in, L=0.6, name="ES lens")
     field_plates = FieldPlates(z0=2.43, L=3.0, w=0.02, name="Field plates")
     dr_aperture = RectangularAperture(
@@ -57,16 +74,18 @@ def main():
     # Define a simulator object
     simulator = TrajectorySimulator()
 
-    # Run simulator
+    # Define apertures of interest
     aoi = [
         "Detected",
-        "DR aperture",
-        "Field plates",
-        "Inside lens",
-    ]  # Define apertures of interest
-    run_name = "Electrostatic lens simulation 11/15/2021 - 1e6"
+        # "DR aperture",
+        # "Field plates",
+        # "Inside lens",
+    ]
+
+    # Run simulator
+    run_name = f"Electrostatic lens simulation 4-7-2022 - det only - {N_traj}"
     simulator.run_simulation(
-        beamline, run_name, N_traj=int(1e6), apertures_of_interest=aoi, n_jobs=10
+        beamline, run_name, N_traj=N_traj, apertures_of_interest=aoi, n_jobs=10
     )
     simulator.counter.print()
     print(f"Beamline efficiency: {simulator.counter.calculate_efficiency()*100:.4f}%")
@@ -77,4 +96,10 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--N_traj", metavar="N_traj", default=int(1e6), type=float)
+
+    args = parser.parse_args()
+    N_traj = int(args.N_traj)
+
     main()
